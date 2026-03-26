@@ -11,9 +11,11 @@ _MenuItem _$MenuItemFromJson(Map<String, dynamic> json) => _MenuItem(
   name: json['name'] as String,
   description: json['description'] as String?,
   price: (json['price'] as num).toDouble(),
-  imagePath: json['imagePath'] as String?,
-  category: json['category'] as String?,
+  imageUrl: json['image_url'] as String?,
+  categoryId: json['category_id'] as String?,
+  canteenId: json['canteen_id'] as String?,
   isAvailable: json['isAvailable'] as bool? ?? true,
+  prepTime: (json['prep_time'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$MenuItemToJson(_MenuItem instance) => <String, dynamic>{
@@ -21,7 +23,9 @@ Map<String, dynamic> _$MenuItemToJson(_MenuItem instance) => <String, dynamic>{
   'name': instance.name,
   'description': instance.description,
   'price': instance.price,
-  'imagePath': instance.imagePath,
-  'category': instance.category,
+  'image_url': instance.imageUrl,
+  'category_id': instance.categoryId,
+  'canteen_id': instance.canteenId,
   'isAvailable': instance.isAvailable,
+  'prep_time': instance.prepTime,
 };

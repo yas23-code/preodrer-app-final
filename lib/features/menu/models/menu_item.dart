@@ -10,13 +10,12 @@ abstract class MenuItem with _$MenuItem {
     required String name,
     String? description,
     required double price,
-
-    // TODO: fill in your actual storage path/column mapping.
-    String? imagePath,
-    String? category,
+    @JsonKey(name: 'image_url') String? imageUrl,
+    @JsonKey(name: 'category_id') String? categoryId,
+    @JsonKey(name: 'canteen_id') String? canteenId,
     @Default(true) bool isAvailable,
+    @JsonKey(name: 'prep_time') int? prepTime,
   }) = _MenuItem;
 
   factory MenuItem.fromJson(Map<String, dynamic> json) => _$MenuItemFromJson(json);
 }
-

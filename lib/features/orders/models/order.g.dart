@@ -8,21 +8,30 @@ part of 'order.dart';
 
 _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
   id: json['id'] as String,
-  userId: json['userId'] as String,
+  studentId: json['student_id'] as String,
+  canteenId: json['canteen_id'] as String?,
   status: json['status'] as String,
-  totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
-  currency: json['currency'] as String? ?? 'INR',
+  totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0.0,
+  paymentStatus: json['payment_status'] as String?,
+  cashfreeOrderId: json['cashfree_order_id'] as String?,
   createdAt:
-      json['createdAt'] == null
+      json['created_at'] == null
           ? null
-          : DateTime.parse(json['createdAt'] as String),
+          : DateTime.parse(json['created_at'] as String),
+  scheduledTime:
+      json['scheduled_time'] == null
+          ? null
+          : DateTime.parse(json['scheduled_time'] as String),
 );
 
 Map<String, dynamic> _$OrderToJson(_Order instance) => <String, dynamic>{
   'id': instance.id,
-  'userId': instance.userId,
+  'student_id': instance.studentId,
+  'canteen_id': instance.canteenId,
   'status': instance.status,
-  'totalAmount': instance.totalAmount,
-  'currency': instance.currency,
-  'createdAt': instance.createdAt?.toIso8601String(),
+  'total_amount': instance.totalAmount,
+  'payment_status': instance.paymentStatus,
+  'cashfree_order_id': instance.cashfreeOrderId,
+  'created_at': instance.createdAt?.toIso8601String(),
+  'scheduled_time': instance.scheduledTime?.toIso8601String(),
 };

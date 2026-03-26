@@ -46,7 +46,7 @@ class OrderDetailScreen extends ConsumerWidget {
                 'Placed: ${order.createdAt == null ? '—' : formatDate(order.createdAt!)}',
               ),
               const SizedBox(height: 12),
-              Text('Total: ${order.totalAmount} ${order.currency}'),
+              Text('Total: ₹${order.totalAmount.toStringAsFixed(2)}'),
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 12),

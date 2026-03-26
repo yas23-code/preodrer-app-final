@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 
 class PreorderTheme {
   static ThemeData light() {
-    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.green);
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colorScheme,
-      brightness: Brightness.light,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFFF6B35),
+        brightness: Brightness.light,
+      ),
     );
   }
 
   static ThemeData dark() {
-    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.green);
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colorScheme,
-      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFFFF6B35),
+        brightness: Brightness.dark,
+      ),
     );
   }
 }
-

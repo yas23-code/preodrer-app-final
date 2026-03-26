@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Order {
 
- String get id; String get userId; String get status; double get totalAmount; String get currency; DateTime? get createdAt;
+ String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'canteen_id') String? get canteenId; String get status;@JsonKey(name: 'total_amount') double get totalAmount;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'cashfree_order_id') String? get cashfreeOrderId;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'scheduled_time') DateTime? get scheduledTime;
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $OrderCopyWith<Order> get copyWith => _$OrderCopyWithImpl<Order>(this as Order, 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cashfreeOrderId, cashfreeOrderId) || other.cashfreeOrderId == cashfreeOrderId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.scheduledTime, scheduledTime) || other.scheduledTime == scheduledTime));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,status,totalAmount,currency,createdAt);
+int get hashCode => Object.hash(runtimeType,id,studentId,canteenId,status,totalAmount,paymentStatus,cashfreeOrderId,createdAt,scheduledTime);
 
 @override
 String toString() {
-  return 'Order(id: $id, userId: $userId, status: $status, totalAmount: $totalAmount, currency: $currency, createdAt: $createdAt)';
+  return 'Order(id: $id, studentId: $studentId, canteenId: $canteenId, status: $status, totalAmount: $totalAmount, paymentStatus: $paymentStatus, cashfreeOrderId: $cashfreeOrderId, createdAt: $createdAt, scheduledTime: $scheduledTime)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $OrderCopyWith<$Res>  {
   factory $OrderCopyWith(Order value, $Res Function(Order) _then) = _$OrderCopyWithImpl;
 @useResult
 $Res call({
- String id, String userId, String status, double totalAmount, String currency, DateTime? createdAt
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'canteen_id') String? canteenId, String status,@JsonKey(name: 'total_amount') double totalAmount,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cashfree_order_id') String? cashfreeOrderId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'scheduled_time') DateTime? scheduledTime
 });
 
 
@@ -65,14 +65,17 @@ class _$OrderCopyWithImpl<$Res>
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? status = null,Object? totalAmount = null,Object? currency = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? studentId = null,Object? canteenId = freezed,Object? status = null,Object? totalAmount = null,Object? paymentStatus = freezed,Object? cashfreeOrderId = freezed,Object? createdAt = freezed,Object? scheduledTime = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
-as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
+as String,canteenId: freezed == canteenId ? _self.canteenId : canteenId // ignore: cast_nullable_to_non_nullable
+as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,totalAmount: null == totalAmount ? _self.totalAmount : totalAmount // ignore: cast_nullable_to_non_nullable
-as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
-as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as double,paymentStatus: freezed == paymentStatus ? _self.paymentStatus : paymentStatus // ignore: cast_nullable_to_non_nullable
+as String?,cashfreeOrderId: freezed == cashfreeOrderId ? _self.cashfreeOrderId : cashfreeOrderId // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,scheduledTime: freezed == scheduledTime ? _self.scheduledTime : scheduledTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -158,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String status,  double totalAmount,  String currency,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cashfree_order_id')  String? cashfreeOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
-return $default(_that.id,_that.userId,_that.status,_that.totalAmount,_that.currency,_that.createdAt);case _:
+return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.cashfreeOrderId,_that.createdAt,_that.scheduledTime);case _:
   return orElse();
 
 }
@@ -179,10 +182,10 @@ return $default(_that.id,_that.userId,_that.status,_that.totalAmount,_that.curre
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String status,  double totalAmount,  String currency,  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cashfree_order_id')  String? cashfreeOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)  $default,) {final _that = this;
 switch (_that) {
 case _Order():
-return $default(_that.id,_that.userId,_that.status,_that.totalAmount,_that.currency,_that.createdAt);case _:
+return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.cashfreeOrderId,_that.createdAt,_that.scheduledTime);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +202,10 @@ return $default(_that.id,_that.userId,_that.status,_that.totalAmount,_that.curre
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String status,  double totalAmount,  String currency,  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cashfree_order_id')  String? cashfreeOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)?  $default,) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
-return $default(_that.id,_that.userId,_that.status,_that.totalAmount,_that.currency,_that.createdAt);case _:
+return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.cashfreeOrderId,_that.createdAt,_that.scheduledTime);case _:
   return null;
 
 }
@@ -214,15 +217,18 @@ return $default(_that.id,_that.userId,_that.status,_that.totalAmount,_that.curre
 @JsonSerializable()
 
 class _Order implements Order {
-  const _Order({required this.id, required this.userId, required this.status, this.totalAmount = 0, this.currency = 'INR', this.createdAt});
+  const _Order({required this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'canteen_id') this.canteenId, required this.status, @JsonKey(name: 'total_amount') this.totalAmount = 0.0, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'cashfree_order_id') this.cashfreeOrderId, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'scheduled_time') this.scheduledTime});
   factory _Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
 @override final  String id;
-@override final  String userId;
+@override@JsonKey(name: 'student_id') final  String studentId;
+@override@JsonKey(name: 'canteen_id') final  String? canteenId;
 @override final  String status;
-@override@JsonKey() final  double totalAmount;
-@override@JsonKey() final  String currency;
-@override final  DateTime? createdAt;
+@override@JsonKey(name: 'total_amount') final  double totalAmount;
+@override@JsonKey(name: 'payment_status') final  String? paymentStatus;
+@override@JsonKey(name: 'cashfree_order_id') final  String? cashfreeOrderId;
+@override@JsonKey(name: 'created_at') final  DateTime? createdAt;
+@override@JsonKey(name: 'scheduled_time') final  DateTime? scheduledTime;
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
@@ -237,16 +243,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cashfreeOrderId, cashfreeOrderId) || other.cashfreeOrderId == cashfreeOrderId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.scheduledTime, scheduledTime) || other.scheduledTime == scheduledTime));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,status,totalAmount,currency,createdAt);
+int get hashCode => Object.hash(runtimeType,id,studentId,canteenId,status,totalAmount,paymentStatus,cashfreeOrderId,createdAt,scheduledTime);
 
 @override
 String toString() {
-  return 'Order(id: $id, userId: $userId, status: $status, totalAmount: $totalAmount, currency: $currency, createdAt: $createdAt)';
+  return 'Order(id: $id, studentId: $studentId, canteenId: $canteenId, status: $status, totalAmount: $totalAmount, paymentStatus: $paymentStatus, cashfreeOrderId: $cashfreeOrderId, createdAt: $createdAt, scheduledTime: $scheduledTime)';
 }
 
 
@@ -257,7 +263,7 @@ abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
   factory _$OrderCopyWith(_Order value, $Res Function(_Order) _then) = __$OrderCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String userId, String status, double totalAmount, String currency, DateTime? createdAt
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'canteen_id') String? canteenId, String status,@JsonKey(name: 'total_amount') double totalAmount,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cashfree_order_id') String? cashfreeOrderId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'scheduled_time') DateTime? scheduledTime
 });
 
 
@@ -274,14 +280,17 @@ class __$OrderCopyWithImpl<$Res>
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? status = null,Object? totalAmount = null,Object? currency = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? studentId = null,Object? canteenId = freezed,Object? status = null,Object? totalAmount = null,Object? paymentStatus = freezed,Object? cashfreeOrderId = freezed,Object? createdAt = freezed,Object? scheduledTime = freezed,}) {
   return _then(_Order(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
-as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
+as String,canteenId: freezed == canteenId ? _self.canteenId : canteenId // ignore: cast_nullable_to_non_nullable
+as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,totalAmount: null == totalAmount ? _self.totalAmount : totalAmount // ignore: cast_nullable_to_non_nullable
-as double,currency: null == currency ? _self.currency : currency // ignore: cast_nullable_to_non_nullable
-as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as double,paymentStatus: freezed == paymentStatus ? _self.paymentStatus : paymentStatus // ignore: cast_nullable_to_non_nullable
+as String?,cashfreeOrderId: freezed == cashfreeOrderId ? _self.cashfreeOrderId : cashfreeOrderId // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,scheduledTime: freezed == scheduledTime ? _self.scheduledTime : scheduledTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }

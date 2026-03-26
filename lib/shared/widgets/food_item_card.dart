@@ -21,9 +21,9 @@ class FoodItemCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final supabase = ref.watch(supabaseClientProvider);
 
-    final imageUrl = item.imagePath == null
+    final imageUrl = item.imageUrl == null
         ? null
-        : supabase.storage.from(kFoodImagesBucketName).getPublicUrl(item.imagePath!);
+        : supabase.storage.from(kFoodImagesBucketName).getPublicUrl(item.imageUrl!);
 
     return Card(
       child: Padding(

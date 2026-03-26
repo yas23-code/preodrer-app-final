@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "820783342425",
+    "project_id": "preorder-c833a",
+    "storage_bucket": "preorder-c833a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:820783342425:android:6c17f37abd5b49966b6248",
+        "android_client_info": {
+          "package_name": "com.abhinav.preorder_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGaAY19EuTFtKiBclHOskgc3Tqg7kGwlk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

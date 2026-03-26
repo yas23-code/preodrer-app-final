@@ -1,15 +1,20 @@
 const kSupabaseUrlEnvKey = 'SUPABASE_URL';
 const kSupabaseAnonKeyEnvKey = 'SUPABASE_ANON_KEY';
 
-// TODO: Replace this placeholder with your actual Supabase Storage bucket name.
-const kFoodImagesBucketName = 'TODO_BUCKET_NAME';
+// Supabase Storage
+const kFoodImagesBucketName = 'item-images'; // TODO: replace with actual bucket name
 
-// Supabase tables.
+// Supabase table names
 const kOrdersTableName = 'orders';
+const kOrderItemsTableName = 'order_items';
 const kProfilesTableName = 'profiles';
 const kMenuItemsTableName = 'menu_items';
+const kCanteensTableName = 'canteens';
+const kCategoriesTableName = 'categories';
+const kUserRolesTableName = 'user_roles';
+const kCanteensTable = kCanteensTableName;
 
-// Edge Function names.
+// Edge Function names
 const kCreateCashfreeOrderFunction = 'create-cashfree-order';
 const kVerifyCashfreePaymentFunction = 'verify-cashfree-payment';
 
