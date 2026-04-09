@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/providers/auth_provider.dart';
+import '../features/auth/screens/landing_screen.dart';
+import '../features/cart/models/cart_model.dart';
+import '../features/cart/providers/cart_controller.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/cart/screens/cart_screen.dart';
 import '../features/menu/screens/menu_screen.dart';
@@ -13,22 +16,30 @@ import '../features/profile/screens/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
+
+  // Determine whether auth is still loading (restoring session)
+  final isLoading = authState.isLoading;
+
+  // Extract the user only when we have resolved data
   final user = authState.maybeWhen(
     data: (u) => u,
     orElse: () => null,
   );
 
   return GoRouter(
-    initialLocation: user == null ? '/login' : '/home',
+    initialLocation: '/',
     routes: [
+      // ── Public routes (no bottom nav) ──────────────────────────────
       GoRoute(
         path: '/',
-        redirect: (context, state) => user == null ? '/login' : '/home',
+        builder: (context, state) => const LandingScreen(),
       ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
+
+      // ── Authenticated shell (with bottom nav) ─────────────────────
       ShellRoute(
         builder: (context, state, child) {
           final location = state.uri.path;
@@ -50,37 +61,48 @@ final routerProvider = Provider<GoRouter>((ref) {
           return Scaffold(
             appBar: AppBar(title: Text(title)),
             body: child,
-            bottomNavigationBar: BottomNavigationBar(
-              currentIndex: index,
-              type: BottomNavigationBarType.fixed,
-              onTap: (i) {
-                final target = switch (i) {
-                  0 => '/home',
-                  1 => '/cart',
-                  2 => '/orders',
-                  3 => '/profile',
-                  _ => '/home',
-                };
-                context.go(target);
+            bottomNavigationBar: Consumer(
+              builder: (context, ref, _) {
+                final cartState = ref.watch(cartControllerProvider).asData?.value;
+                final itemCount = cartState?.itemCount ?? 0;
+
+                return BottomNavigationBar(
+                  currentIndex: index,
+                  type: BottomNavigationBarType.fixed,
+                  onTap: (i) {
+                    final target = switch (i) {
+                      0 => '/home',
+                      1 => '/cart',
+                      2 => '/orders',
+                      3 => '/profile',
+                      _ => '/home',
+                    };
+                    context.go(target);
+                  },
+                  items: [
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.restaurant_menu_outlined),
+                      label: 'Menu',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Badge(
+                        isLabelVisible: itemCount > 0,
+                        label: Text('$itemCount'),
+                        child: const Icon(Icons.shopping_cart_outlined),
+                      ),
+                      label: 'Cart',
+                    ),
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.receipt_long_outlined),
+                      label: 'Orders',
+                    ),
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.person_outline),
+                      label: 'Profile',
+                    ),
+                  ],
+                );
               },
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.restaurant_menu_outlined),
-                  label: 'Menu',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.shopping_cart_outlined),
-                  label: 'Cart',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  label: 'Orders',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
-                  label: 'Profile',
-                ),
-              ],
             ),
           );
         },
@@ -103,6 +125,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+
+      // ── Standalone authenticated routes (no bottom nav) ───────────
       GoRoute(
         path: '/order/:id',
         builder: (context, state) =>
@@ -113,18 +137,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PaymentWebviewScreen(),
       ),
     ],
+
+    // ── Global redirect logic ─────────────────────────────────────────
+    //
+    // LOADING (session being restored):
+    //   • Stay on `/` — the landing page serves as a visual splash
+    //   • Don't redirect anywhere yet; wait for auth to resolve
+    //
+    // Unauthenticated (loading complete, no user):
+    //   • `/` and `/login` are allowed (public pages)
+    //   • Any other path → redirect to `/`
+    //
+    // Authenticated:
+    //   • `/` or `/login` → redirect to `/home`
+    //   • Everything else is allowed
+    //
     redirect: (context, state) {
       final path = state.uri.path;
-      final isLogin = path == '/login';
+      final isPublic = path == '/' || path == '/login';
+
+      // While auth state is still loading (restoring persisted session),
+      // keep the user on the landing page. Do NOT redirect to login or
+      // home yet — we don't know the answer yet.
+      if (isLoading) {
+        return isPublic ? null : '/';
+      }
 
       if (user == null) {
-        return isLogin ? null : '/login';
+        return isPublic ? null : '/';
       }
-      if (isLogin) {
+
+      // Authenticated user on a public page → send to home
+      if (isPublic) {
         return '/home';
       }
+
       return null;
     },
   );
 });
-

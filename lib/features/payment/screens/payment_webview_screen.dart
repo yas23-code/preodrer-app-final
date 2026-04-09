@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../cart/providers/cart_provider.dart';
+import '../../cart/providers/cart_controller.dart';
 import '../../payment/providers/payment_provider.dart';
 
 class PaymentWebviewScreen extends ConsumerStatefulWidget {
@@ -40,8 +40,9 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
   }
 
   Future<void> _startPaymentFlow() async {
-    final cart = ref.read(cartControllerProvider);
-    if (cart.lines.isEmpty) {
+    final cartAsync = ref.watch(cartControllerProvider);
+    final cart = cartAsync.asData?.value;
+    if (cart == null || cart.lines.isEmpty) {
       if (!mounted) return;
       setState(() => _loadingPayment = false);
       return;

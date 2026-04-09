@@ -83,7 +83,10 @@ class FoodItemCard extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             IconButton(
-              onPressed: onAdd,
+              onPressed: () {
+                debugPrint('[UI_WIRING] Add tapped in FoodItemCard for item=${item.name}');
+                if (onAdd != null) onAdd!();
+              },
               icon: const Icon(Icons.add_circle_outline),
             ),
           ],

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../cart/providers/cart_provider.dart';
+import '../../cart/models/cart_model.dart';
+import '../../cart/providers/cart_controller.dart';
 import '../providers/menu_provider.dart';
 import '../../../shared/widgets/food_item_card.dart';
 
@@ -25,7 +26,15 @@ class MenuScreen extends ConsumerWidget {
             child: FoodItemCard(
               item: item,
               onAdd: () {
-                ref.read(cartControllerProvider.notifier).addItem(item);
+                debugPrint('[UI_WIRING] onAdd callback triggered in MenuScreen for ${item.name}');
+                try {
+                  final notifier = ref.read(cartControllerProvider.notifier);
+                  debugPrint('[UI_WIRING] Successfully read cartControllerProvider.notifier');
+                  notifier.addItem(item);
+                  debugPrint('[UI_WIRING] successfully called addItem(item)');
+                } catch (e, st) {
+                  debugPrint('[UI_WIRING] Error calling addItem: $e\n$st');
+                }
               },
             ),
           );
