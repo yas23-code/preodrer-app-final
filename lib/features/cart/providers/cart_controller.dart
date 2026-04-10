@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants.dart';
+import '../../../core/supabase_client.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../menu/models/menu_item.dart';
 import '../models/cart_model.dart';
@@ -110,6 +112,69 @@ class CartController extends AsyncNotifier<CartState> {
     } catch (e) {
       debugPrint('[CartController] removeItem -> DB failure, ROLLING BACK UI: $e');
       state = AsyncValue.data(current);
+    }
+  }
+
+  Future<void> placeOrder() async {
+    final userId = _userId;
+    if (userId == null) return;
+    
+    final currentCart = state.asData?.value;
+    if (currentCart == null || currentCart.lines.isEmpty) return;
+
+    // ── CANTEEN ID RESOLUTION ──────────────────────────────────────────
+    // ALWAYS use kAcktronCanteenId for the order row. The item.canteenId
+    // field can carry a stale / wrong value (e.g. Gori Cafe 38a27df9-...)
+    // if old cart_items or menu_items reference a different canteen.
+    // This is the authoritative canteen for all customer orders in the
+    // Acktron deployment.
+    const orderCanteenId = kAcktronCanteenId;
+
+    // ── Debug diagnostics ──────────────────────────────────────────────
+    for (final line in currentCart.lines.values) {
+      debugPrint('[CANTEEN_DEBUG] placeOrder -> cart item: '
+          'id=${line.item.id}, name=${line.item.name}, '
+          'item.canteenId=${line.item.canteenId}');
+    }
+    debugPrint('[CANTEEN_DEBUG] placeOrder -> FINAL order canteen_id=$orderCanteenId');
+    debugPrint('[CANTEEN_DEBUG] placeOrder -> Expected Acktron=$kAcktronCanteenId');
+
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+
+      // 1. Insert order — always Acktron canteen
+      final orderPayload = {
+        'student_id': userId,
+        'canteen_id': orderCanteenId,
+        'status': 'pending',
+        'total_amount': currentCart.totalAmount,
+      };
+      debugPrint('[CANTEEN_DEBUG] placeOrder -> INSERT payload: $orderPayload');
+
+      final newOrder = await supabase
+          .from(kOrdersTableName)
+          .insert(orderPayload)
+          .select()
+          .single();
+
+      final orderId = newOrder['id'];
+      debugPrint('[CANTEEN_DEBUG] placeOrder -> created order id=$orderId');
+
+      // 2. Insert order items
+      final orderItemsData = currentCart.lines.values.map((line) => {
+        'order_id': orderId,
+        'menu_item_id': line.item.id,
+        'quantity': line.quantity,
+        'price': line.item.price,
+      }).toList();
+
+      await supabase.from(kOrderItemsTableName).insert(orderItemsData);
+
+      // 3. Successfully placed — clear cart
+      await clear();
+    } catch (e) {
+      debugPrint('[CartController] placeOrder -> DB failure: $e');
+      throw Exception('Failed to place order: $e');
     }
   }
 

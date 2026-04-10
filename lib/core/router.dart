@@ -8,7 +8,7 @@ import '../features/cart/models/cart_model.dart';
 import '../features/cart/providers/cart_controller.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/cart/screens/cart_screen.dart';
-import '../features/menu/screens/menu_screen.dart';
+import '../features/auth/widgets/role_gate.dart';
 import '../features/orders/screens/order_detail_screen.dart';
 import '../features/orders/screens/orders_screen.dart';
 import '../features/payment/screens/payment_webview_screen.dart';
@@ -109,7 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/home',
-            builder: (context, state) => const MenuScreen(),
+            builder: (context, state) => const RoleGate(),
           ),
           GoRoute(
             path: '/cart',

@@ -16,6 +16,11 @@ const kUserRolesTableName = 'user_roles';
 const kCartItemsTableName = 'cart_items';
 const kCanteensTable = kCanteensTableName;
 
+// ── Acktron Canteen (confirmed in DB) ─────────────────────────────
+/// The single active canteen in the Acktron deployment.
+const kAcktronCanteenId = 'b4b45a67-1f47-4b40-91bd-16b0e36feab9';
+const kAcktronVendorId  = '252a9dc4-dfe7-4397-b4d1-f2ca65dced8d';
+
 // Edge Function names
 const kCreateCashfreeOrderFunction = 'create-cashfree-order';
 const kVerifyCashfreePaymentFunction = 'verify-cashfree-payment';
