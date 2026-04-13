@@ -13,6 +13,7 @@ import '../features/orders/screens/order_detail_screen.dart';
 import '../features/orders/screens/orders_screen.dart';
 import '../features/payment/screens/payment_webview_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/menu/screens/menu_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
@@ -51,11 +52,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             _ => 0,
           };
           final title = switch (index) {
-            0 => 'Menu',
+            0 => 'Home',
             1 => 'Cart',
             2 => 'Orders',
             3 => 'Profile',
-            _ => 'Menu',
+            _ => 'Home',
           };
 
           return Scaffold(
@@ -81,8 +82,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                   },
                   items: [
                     const BottomNavigationBarItem(
-                      icon: Icon(Icons.restaurant_menu_outlined),
-                      label: 'Menu',
+                      icon: Icon(Icons.home_outlined),
+                      label: 'Home',
                     ),
                     BottomNavigationBarItem(
                       icon: Badge(
@@ -127,6 +128,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // ── Standalone authenticated routes (no bottom nav) ───────────
+      GoRoute(
+        path: '/menu',
+        builder: (context, state) => const MenuScreen(),
+      ),
       GoRoute(
         path: '/order/:id',
         builder: (context, state) =>

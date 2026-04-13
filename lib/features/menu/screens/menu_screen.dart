@@ -16,10 +16,14 @@ class MenuScreen extends ConsumerWidget {
     return menuItems.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Failed to load menu: $e')),
-      data: (items) => ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
+      data: (items) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Menu'),
+        ),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
           final item = items[index];
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -39,6 +43,7 @@ class MenuScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../menu/screens/menu_screen.dart';
+import '../../canteen/screens/canteens_screen.dart';
 import '../../vendor/screens/vendor_dashboard_screen.dart';
 import '../providers/role_provider.dart';
 
@@ -17,12 +17,12 @@ class RoleGate extends ConsumerWidget {
         if (role == AppRole.vendor) {
           return const VendorDashboardScreen();
         }
-        return const MenuScreen();
+        return const CanteensScreen();
       },
       loading: () => const Center(
         child: CircularProgressIndicator(),
       ),
-      error: (e, _) => const MenuScreen(), // Default to customer on error
+      error: (e, _) => const CanteensScreen(), // Default to customer on error
     );
   }
 }
