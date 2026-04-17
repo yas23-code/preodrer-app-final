@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
@@ -172,11 +173,34 @@ class CartController extends AsyncNotifier<CartState> {
 
       // --- BROADCAST TO VENDOR ---
       // This bypasses any database RLS locking limitations for Realtime WAL streams
-      // by pinging the vendor app directly to fetch the new orders.
-      supabase.channel('vendor-broadcast-$kAcktronVendorId').sendBroadcastMessage(
-        event: 'refresh_orders',
-        payload: {'order_id': orderId, 'canteen_id': orderCanteenId},
-      );
+      // We use a general known channel name to avoid timeout rejections on random channel strings.
+      
+      final channel = supabase.channel('vendor_updates');
+      
+      channel.subscribe((status, [error]) async {
+        if (status == RealtimeSubscribeStatus.subscribed) {
+          debugPrint('[CartController] WebSocket joined. Sending broadcast...');
+          try {
+            await channel.sendBroadcastMessage(
+              event: 'refresh_orders',
+              payload: {
+                'order_id': orderId, 
+                'canteen_id': orderCanteenId,
+                'vendor_id': kAcktronVendorId 
+              },
+            );
+            debugPrint('[CartController] Broadcast successful.');
+          } catch (e) {
+            debugPrint('[CartController] Broadcast failed: $e');
+          } finally {
+            // Clean up the channel to avoid keeping dead sockets alive across orders
+            await Future.delayed(const Duration(seconds: 1));
+            await supabase.removeChannel(channel);
+          }
+        } else if (status == RealtimeSubscribeStatus.closed || status == RealtimeSubscribeStatus.channelError) {
+           debugPrint('[CartController] WebSocket failed to join. Status: $status, error: $error');
+        }
+      });
 
       // 3. Successfully placed — clear cart
       await clear();

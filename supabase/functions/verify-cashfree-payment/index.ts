@@ -109,12 +109,12 @@ serve(async (req: Request) => {
             // --- BROADCAST TO VENDOR UI ---
             // Bypasses WAL RLS limitations so the dashboard instantly refreshes without waiting for the next polling cycle
             try {
-              const channel = supabase.channel(`vendor-broadcast-${canteenData.vendor_id}`);
+              const channel = supabase.channel('vendor_updates');
               await channel.subscribe();
               await channel.send({
                 type: 'broadcast',
                 event: 'refresh_orders',
-                payload: { order_id: app_order_id, status: 'confirmed' }
+                payload: { order_id: app_order_id, status: 'confirmed', vendor_id: canteenData.vendor_id }
               });
               await supabase.removeChannel(channel);
             } catch (bErr) {

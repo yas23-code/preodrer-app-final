@@ -6,6 +6,7 @@ import '../../../shared/utils/formatters.dart';
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../main.dart';
 
 final vendorOrdersProvider =
     AsyncNotifierProvider<VendorOrdersController, List<Map<String, dynamic>>>(
@@ -57,7 +58,10 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
 
   Future<void> _unsubscribe() async {
     try {
-      await _channel?.unsubscribe();
+      if (_channel != null) {
+        final supabase = ref.read(supabaseClientProvider);
+        await supabase.removeChannel(_channel);
+      }
     } catch (_) {}
     _channel = null;
   }
@@ -147,14 +151,30 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
     final List<String> canteenIds = canteensList.map((c) => c['id'].toString()).toList();
 
     _channel = supabase
-        .channel('vendor-broadcast-$userId')
+        .channel('vendor_updates')
         ..onBroadcast(
           event: 'refresh_orders',
           callback: (payload) async {
+            // Check if the ping is for our canteen
+            final payloadCanteenId = payload['canteen_id']?.toString();
+            if (payloadCanteenId != null && !canteenIds.contains(payloadCanteenId)) {
+                debugPrint('[BROADCAST DIAGNOSIS] Ignored. Canteen mismatch.');
+                return;
+            }
+
             debugPrint('[BROADCAST DIAGNOSIS] Refresh signal received: $payload');
             final fresh = await _fetchVendorOrders(userId);
             state = AsyncValue.data(fresh);
             debugPrint('[BROADCAST DIAGNOSIS] State updated with ${fresh.length} orders');
+
+            // Trigger a local pop-up notification for the vendor
+            final String orderId = payload['order_id'] ?? '';
+            final String shortId = orderId.length >= 4 ? '#${orderId.substring(0, 4).toUpperCase()}' : 'A new order';
+            
+            showLocalNotification(
+              'New Order Received!',
+              '$shortId has just been placed and is waiting for you.',
+            );
           },
         )
         ..subscribe((status, [error]) {

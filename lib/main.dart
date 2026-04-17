@@ -20,14 +20,30 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
 }
 
-Future<void> _initFirebaseMessaging() async {
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
+Future<void> _initLocalNotifications() async {
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iOSInit = DarwinInitializationSettings();
-  const initSettings =
-      InitializationSettings(android: androidInit, iOS: iOSInit);
+  const initSettings = InitializationSettings(android: androidInit, iOS: iOSInit);
   await _localNotifications.initialize(initSettings);
+  
+  final androidPlugin = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  if (androidPlugin != null) {
+      // Request permissions natively for Android 13+
+      await androidPlugin.requestNotificationsPermission();
+      
+      // Explicitly create the channel for Android 8+
+      const channel = AndroidNotificationChannel(
+        'default_channel',
+        'Default',
+        description: 'Default notifications channel',
+        importance: Importance.max,
+      );
+      await androidPlugin.createNotificationChannel(channel);
+  }
+}
+
+Future<void> _initFirebaseMessaging() async {
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   final messaging = FirebaseMessaging.instance;
   await messaging.requestPermission();
@@ -53,6 +69,29 @@ Future<void> _initFirebaseMessaging() async {
   });
 }
 
+void showLocalNotification(String title, String body) {
+  debugPrint('[LOCAL NOTIFICATION] Attempting to show: $title - $body');
+  try {
+    _localNotifications.show(
+      DateTime.now().millisecond,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'default_channel',
+          'Default',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+    debugPrint('[LOCAL NOTIFICATION] Successfully called show()');
+  } catch (e, st) {
+    debugPrint('[LOCAL NOTIFICATION] Error showing notification: $e\n$st');
+  }
+}
+
 Future<void> _loadEnv() async {
   try {
     await dotenv.load(fileName: '.env');
@@ -65,6 +104,8 @@ Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     await _loadEnv();
+    
+    await _initLocalNotifications();
     
     try {
       await Firebase.initializeApp();
