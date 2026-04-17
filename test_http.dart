@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 void main() async {
   final url = 'https://erlsfpqmtzbcpcjhroop.supabase.co/rest/v1/cart_items';

@@ -92,7 +92,7 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
       return _mapOrdersToUi(response as List<dynamic>);
     } catch (e, st) {
       debugPrint('[PROVIDER DIAGNOSIS] EXCEPTION caught: $e\n$st');
-      throw e; // rethrow to expose to UI
+      rethrow; // rethrow to expose to UI
     }
   }
 
@@ -147,23 +147,18 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
     final List<String> canteenIds = canteensList.map((c) => c['id'].toString()).toList();
 
     _channel = supabase
-        .channel('vendor-orders-realtime-$userId')
-        ..onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: kOrdersTableName,
+        .channel('vendor-broadcast-$userId')
+        ..onBroadcast(
+          event: 'refresh_orders',
           callback: (payload) async {
-            final newRecord = payload.newRecord;
-            if (newRecord != null) {
-              final recordCanteenId = newRecord['canteen_id']?.toString();
-              if (recordCanteenId != null && !canteenIds.contains(recordCanteenId)) return;
-            }
-            
-            // When an order changes, re-fetch entirely to get relations (items/profiles) easily
+            debugPrint('[BROADCAST DIAGNOSIS] Refresh signal received: $payload');
             final fresh = await _fetchVendorOrders(userId);
             state = AsyncValue.data(fresh);
+            debugPrint('[BROADCAST DIAGNOSIS] State updated with ${fresh.length} orders');
           },
         )
-        ..subscribe();
+        ..subscribe((status, [error]) {
+           debugPrint('[BROADCAST DIAGNOSIS] Channel subscribe status: $status, error: $error');
+        });
   }
 }

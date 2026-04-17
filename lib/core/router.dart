@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/landing_screen.dart';
-import '../features/cart/models/cart_model.dart';
 import '../features/cart/providers/cart_controller.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/cart/screens/cart_screen.dart';

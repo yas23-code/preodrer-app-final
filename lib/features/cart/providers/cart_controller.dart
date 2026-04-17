@@ -170,6 +170,14 @@ class CartController extends AsyncNotifier<CartState> {
 
       await supabase.from(kOrderItemsTableName).insert(orderItemsData);
 
+      // --- BROADCAST TO VENDOR ---
+      // This bypasses any database RLS locking limitations for Realtime WAL streams
+      // by pinging the vendor app directly to fetch the new orders.
+      supabase.channel('vendor-broadcast-$kAcktronVendorId').sendBroadcastMessage(
+        event: 'refresh_orders',
+        payload: {'order_id': orderId, 'canteen_id': orderCanteenId},
+      );
+
       // 3. Successfully placed — clear cart
       await clear();
     } catch (e) {

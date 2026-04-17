@@ -11,7 +11,7 @@ void main() async {
     url,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + serviceRoleKey,
+      'Authorization': 'Bearer $serviceRoleKey',
     },
     body: jsonEncode({
       'app_order_id': 'test-${DateTime.now().millisecondsSinceEpoch}',
@@ -19,6 +19,6 @@ void main() async {
       'customer_id': 'test_user',
     }),
   );
-  print('Status: ' + response.statusCode.toString());
-  print('Body: ' + response.body);
+  print('Status: ${response.statusCode}');
+  print('Body: ${response.body}');
 }

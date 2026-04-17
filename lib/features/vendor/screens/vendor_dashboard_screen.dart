@@ -58,6 +58,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       final rawStatus = o['raw_status'] as String? ?? '';
       if (_selectedTab == 0) {
         return rawStatus == 'pending' || 
+               rawStatus == 'confirmed' || 
                rawStatus == 'accepted' || 
                rawStatus == 'preparing' || 
                rawStatus == 'in_progress';

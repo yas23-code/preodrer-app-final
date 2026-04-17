@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/cart_model.dart';
 import '../providers/cart_controller.dart';
 import '../../../shared/utils/formatters.dart';
 

@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -46,6 +47,7 @@ final currentUserProfileProvider =
 // ─── Auth Controller ──────────────────────────────────────────────
 class AuthController extends AsyncNotifier<User?> {
   StreamSubscription? _authSubscription;
+  StreamSubscription? _fcmTokenSubscription;
   bool _googleInitialized = false;
 
   @override
@@ -55,11 +57,19 @@ class AuthController extends AsyncNotifier<User?> {
 
     _authSubscription?.cancel();
     _authSubscription = supabase.auth.onAuthStateChange.listen((event) {
-      state = AsyncValue.data(event.session?.user);
+      final user = event.session?.user;
+      state = AsyncValue.data(user);
+      
+      if (user != null) {
+        _syncFcmToken(user.id);
+      } else {
+        _fcmTokenSubscription?.cancel();
+      }
     });
 
     ref.onDispose(() async {
       await _authSubscription?.cancel();
+      await _fcmTokenSubscription?.cancel();
     });
 
     return currentUser;
@@ -191,6 +201,33 @@ class AuthController extends AsyncNotifier<User?> {
       await GoogleSignIn.instance.signOut();
     } catch (_) {
       // Google sign-out can throw if user wasn't signed in via Google.
+    }
+  }
+
+  // ─── FCM Token Management ───────────────────────────────────────
+  Future<void> _syncFcmToken(String userId) async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      
+      final token = await messaging.getToken();
+      if (token != null) {
+        final supabase = ref.read(supabaseClientProvider);
+        await supabase.from('user_device_tokens').upsert({
+          'user_id': userId,
+          'fcm_token': token,
+        });
+      }
+
+      await _fcmTokenSubscription?.cancel();
+      _fcmTokenSubscription = messaging.onTokenRefresh.listen((newToken) async {
+        final supabase = ref.read(supabaseClientProvider);
+        await supabase.from('user_device_tokens').upsert({
+          'user_id': userId,
+          'fcm_token': newToken,
+        });
+      });
+    } catch (e) {
+      developer.log('Error syncing FCM token: $e', name: 'AuthController');
     }
   }
 }

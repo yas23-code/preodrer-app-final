@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../cart/models/cart_model.dart';
 import '../../cart/providers/cart_controller.dart';
 import '../providers/menu_provider.dart';
 import '../../../shared/widgets/food_item_card.dart';
