@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,10 +16,18 @@ final vendorOrdersProvider =
 
 class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
   String? _currentUserId;
-  dynamic _channel;
+  Timer? _pollTimer;
+  /// Track known order IDs so we can detect NEW orders for notifications
+  Set<String> _knownOrderIds = {};
 
   @override
   Future<List<Map<String, dynamic>>> build() async {
+    // Cancel polling when this provider is disposed
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    });
+
     ref.listen<AsyncValue<User?>>(
       authControllerProvider,
       (previous, next) async {
@@ -28,7 +37,8 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         );
         if (user == null) {
           _currentUserId = null;
-          await _unsubscribe();
+          _stopPolling();
+          _knownOrderIds.clear();
           state = const AsyncValue.data([]);
           return;
         }
@@ -36,10 +46,11 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         if (_currentUserId == user.id) return;
         _currentUserId = user.id;
 
-        await _unsubscribe();
         final initial = await _fetchVendorOrders(user.id);
+        // Seed known IDs from initial fetch (don't notify for existing orders)
+        _knownOrderIds = initial.map((o) => o['id'] as String).toSet();
         state = AsyncValue.data(initial);
-        _subscribeRealtime(user.id);
+        _startPolling(user.id);
       },
     );
 
@@ -52,22 +63,55 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
 
     _currentUserId = initialUser.id;
     final initial = await _fetchVendorOrders(initialUser.id);
-    _subscribeRealtime(initialUser.id);
+    // Seed known IDs from initial fetch
+    _knownOrderIds = initial.map((o) => o['id'] as String).toSet();
+    _startPolling(initialUser.id);
     return initial;
   }
 
-  Future<void> _unsubscribe() async {
-    try {
-      if (_channel != null) {
-        final supabase = ref.read(supabaseClientProvider);
-        await supabase.removeChannel(_channel);
+  void _startPolling(String userId) {
+    _stopPolling();
+    debugPrint('[VENDOR POLL] Starting polling every 5 seconds for userId=$userId');
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      try {
+        final fresh = await _fetchVendorOrders(userId);
+        
+        // Detect new orders by comparing IDs
+        final freshIds = fresh.map((o) => o['id'] as String).toSet();
+        final newIds = freshIds.difference(_knownOrderIds);
+
+        if (newIds.isNotEmpty) {
+          debugPrint('[VENDOR POLL] Detected ${newIds.length} new order(s): $newIds');
+
+          // Show a notification for each new order
+          for (final newId in newIds) {
+            final shortId = newId.length >= 4
+                ? '#${newId.substring(0, 4).toUpperCase()}'
+                : 'A new order';
+            showLocalNotification(
+              'New Order Received!',
+              '$shortId has just been placed and is waiting for you.',
+            );
+          }
+
+          // Update known IDs
+          _knownOrderIds = freshIds;
+        }
+
+        // Always update the state so status changes (e.g. pending→ready) are reflected
+        state = AsyncValue.data(fresh);
+      } catch (e) {
+        debugPrint('[VENDOR POLL] Error during poll: $e');
       }
-    } catch (_) {}
-    _channel = null;
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   Future<List<Map<String, dynamic>>> _fetchVendorOrders(String userId) async {
-    debugPrint('[PROVIDER DIAGNOSIS] _fetchVendorOrders called for userId=$userId');
     final supabase = ref.read(supabaseClientProvider);
 
     try {
@@ -76,15 +120,12 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
           .select('id')
           .eq('vendor_id', userId);
           
-      debugPrint('[PROVIDER DIAGNOSIS] canteensRes: $canteensRes');
       final List<dynamic> canteensList = canteensRes;
       if (canteensList.isEmpty) {
-        debugPrint('[PROVIDER DIAGNOSIS] The logged-in auth user does NOT own any canteen in public.canteens. vendor_id=$userId');
         return [];
       }
       
       final List<String> canteenIds = canteensList.map((c) => c['id'].toString()).toList();
-      debugPrint('[PROVIDER DIAGNOSIS] Resolved canteenIds: $canteenIds');
 
       final response = await supabase
           .from(kOrdersTableName)
@@ -92,11 +133,10 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
           .inFilter('canteen_id', canteenIds)
           .order('created_at', ascending: false);
 
-      debugPrint('[PROVIDER DIAGNOSIS] Final orders query result count: ${(response as List).length}');
       return _mapOrdersToUi(response as List<dynamic>);
     } catch (e, st) {
-      debugPrint('[PROVIDER DIAGNOSIS] EXCEPTION caught: $e\n$st');
-      rethrow; // rethrow to expose to UI
+      debugPrint('[VENDOR POLL] EXCEPTION caught: $e\n$st');
+      rethrow;
     }
   }
 
@@ -135,50 +175,5 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         'created_at': createdAtStr,
       };
     }).toList();
-  }
-
-  void _subscribeRealtime(String userId) async {
-    final supabase = ref.read(supabaseClientProvider);
-
-    final canteensRes = await supabase
-        .from(kCanteensTableName)
-        .select('id')
-        .eq('vendor_id', userId);
-    
-    final List<dynamic> canteensList = canteensRes;
-    if (canteensList.isEmpty) return;
-    
-    final List<String> canteenIds = canteensList.map((c) => c['id'].toString()).toList();
-
-    _channel = supabase
-        .channel('vendor_updates')
-        ..onBroadcast(
-          event: 'refresh_orders',
-          callback: (payload) async {
-            // Check if the ping is for our canteen
-            final payloadCanteenId = payload['canteen_id']?.toString();
-            if (payloadCanteenId != null && !canteenIds.contains(payloadCanteenId)) {
-                debugPrint('[BROADCAST DIAGNOSIS] Ignored. Canteen mismatch.');
-                return;
-            }
-
-            debugPrint('[BROADCAST DIAGNOSIS] Refresh signal received: $payload');
-            final fresh = await _fetchVendorOrders(userId);
-            state = AsyncValue.data(fresh);
-            debugPrint('[BROADCAST DIAGNOSIS] State updated with ${fresh.length} orders');
-
-            // Trigger a local pop-up notification for the vendor
-            final String orderId = payload['order_id'] ?? '';
-            final String shortId = orderId.length >= 4 ? '#${orderId.substring(0, 4).toUpperCase()}' : 'A new order';
-            
-            showLocalNotification(
-              'New Order Received!',
-              '$shortId has just been placed and is waiting for you.',
-            );
-          },
-        )
-        ..subscribe((status, [error]) {
-           debugPrint('[BROADCAST DIAGNOSIS] Channel subscribe status: $status, error: $error');
-        });
   }
 }
