@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants.dart';
@@ -103,6 +104,7 @@ Future<void> _loadEnv() async {
 Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+    await initializeDateFormatting('en_IN', null);
     await _loadEnv();
     
     await _initLocalNotifications();

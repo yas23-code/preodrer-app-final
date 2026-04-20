@@ -30,6 +30,13 @@ class VendorDashboardScreen extends ConsumerStatefulWidget {
 class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
   bool _isOpen = true;
   int _selectedTab = 0; // 0: In Progress, 1: Ready, 2: Completed
+  final TextEditingController _pickupCodeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _pickupCodeController.dispose();
+    super.dispose();
+  }
 
   void _handleSignOut() {
     ref.read(authControllerProvider.notifier).signOut();
@@ -64,7 +71,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                rawStatus == 'in_progress';
       }
       if (_selectedTab == 1) return rawStatus == 'ready';
-      if (_selectedTab == 2) return rawStatus == 'completed';
+      if (_selectedTab == 2) return rawStatus == 'completed' || rawStatus == 'rejected' || rawStatus == 'cancelled' || rawStatus == 'declined';
       return false;
     }).toList();
 
@@ -141,7 +148,8 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
               const SizedBox(height: 24),
 
               // ── Complete an Order Card ───────────────────────────────────────
-              Card(
+              if (_selectedTab == 1)
+                Card(
                 elevation: 0,
                 color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -176,18 +184,56 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                         children: [
                           Expanded(
                             child: TextField(
+                              controller: _pickupCodeController,
                               decoration: InputDecoration(
-                                hintText: 'Enter 4-digit pickup code',
+                                hintText: 'Enter 4-char pickup code',
                                 prefixIcon: const Icon(Icons.numbers),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                               ),
-                              keyboardType: TextInputType.number,
+                              keyboardType: TextInputType.text,
                             ),
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
-                            onPressed: () {},
+                            onPressed: () async {
+                              try {
+                                final input = _pickupCodeController.text.trim().toUpperCase();
+                                if (input.isEmpty) return;
+
+                                final allOrders = ref.read(vendorOrdersProvider).value ?? [];
+                                final matchingOrders = allOrders.where((o) {
+                                  if (o['raw_status'] != 'ready') return false;
+                                  // Fallback to substring if secretPin was cached rigidly before our update
+                                  final pinVal = o['secretPin']?.toString() ?? (o['id'] as String).substring(0, 4).toUpperCase();
+                                  return pinVal == input;
+                                }).toList();
+
+                                if (matchingOrders.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('The PIN was wrong or order is not Ready.')),
+                                  );
+                                  return;
+                                }
+                                
+                                final match = matchingOrders.first;
+                                
+                                await ref.read(vendorOrdersProvider.notifier).updateOrderStatus(match['id'], 'completed');
+                                _pickupCodeController.clear();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Order Completed successfully!')),
+                                  );
+                                }
+                              } catch (e) {
+                                debugPrint('Verification Error: $e');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('UI/Verification Error: $e')),
+                                  );
+                                }
+                              }
+                            },
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -221,7 +267,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
               const SizedBox(height: 16),
               
               if (filteredOrders.isNotEmpty)
-                ...filteredOrders.map((order) => _buildOrderCard(order, theme, colorScheme)),
+                ...filteredOrders.map((order) => _buildOrderCard(order, theme, colorScheme, ref)),
               
               if (filteredOrders.isEmpty)
                 Padding(
@@ -282,8 +328,10 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildOrderCard(Map<String, dynamic> order, ThemeData theme, ColorScheme colorScheme, WidgetRef ref) {
     final isDineIn = order['type'] == 'Dine-in';
+    final rawStatus = order['raw_status'] as String? ?? '';
+    final orderId = order['id'] as String;
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -378,24 +426,38 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    child: const Text('Decline'),
+            if (rawStatus == 'pending' || rawStatus == 'confirmed') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => ref.read(vendorOrdersProvider.notifier).updateOrderStatus(orderId, 'declined'),
+                      child: const Text('Decline'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () {},
-                    child: const Text('Mark Ready'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => ref.read(vendorOrdersProvider.notifier).updateOrderStatus(orderId, 'accepted'),
+                      child: const Text('Accept'),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ] else if (rawStatus == 'accepted' || rawStatus == 'processing') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => ref.read(vendorOrdersProvider.notifier).updateOrderStatus(orderId, 'ready'),
+                      child: const Text('Mark Ready'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

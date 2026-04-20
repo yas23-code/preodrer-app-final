@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,10 +15,15 @@ final ordersProvider =
 
 class OrdersController extends AsyncNotifier<List<Order>> {
   String? _currentUserId;
-  dynamic _channel;
+  Timer? _pollTimer;
 
   @override
   Future<List<Order>> build() async {
+    // Cancel polling when this provider is disposed
+    ref.onDispose(() {
+      _stopPolling();
+    });
+
     ref.listen<AsyncValue<User?>>(
       authControllerProvider,
       (previous, next) async {
@@ -26,7 +33,7 @@ class OrdersController extends AsyncNotifier<List<Order>> {
         );
         if (user == null) {
           _currentUserId = null;
-          await _unsubscribe();
+          _stopPolling();
           state = const AsyncValue.data([]);
           return;
         }
@@ -34,10 +41,9 @@ class OrdersController extends AsyncNotifier<List<Order>> {
         if (_currentUserId == user.id) return;
         _currentUserId = user.id;
 
-        await _unsubscribe();
         final initial = await _fetchOrders(user.id);
         state = AsyncValue.data(initial);
-        _subscribeRealtime(user.id);
+        _startPolling(user.id);
       },
     );
 
@@ -49,69 +55,40 @@ class OrdersController extends AsyncNotifier<List<Order>> {
 
     _currentUserId = initialUser.id;
     final initial = await _fetchOrders(initialUser.id);
-    _subscribeRealtime(initialUser.id);
+    _startPolling(initialUser.id);
     return initial;
   }
 
-  Future<void> _unsubscribe() async {
-    try {
-      await _channel?.unsubscribe();
-    } catch (_) {
-      // ignore unsubscribe errors
-    }
-    _channel = null;
+  void _startPolling(String userId) {
+    _stopPolling();
+    debugPrint('[ORDERS POLL] Starting polling every 5 seconds for studentId=$userId');
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      try {
+        final fresh = await _fetchOrders(userId);
+        state = AsyncValue.data(fresh);
+      } catch (e) {
+        debugPrint('[ORDERS POLL] Error during poll: $e');
+      }
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   Future<List<Order>> _fetchOrders(String userId) async {
     final supabase = ref.read(supabaseClientProvider);
 
-    // TODO: fill in the actual orders table column names and filters.
     final response = await supabase
         .from(kOrdersTableName)
         .select()
-        .eq('user_id', userId);
+        .eq('student_id', userId)
+        .order('created_at', ascending: false);
 
     final data = response as List<dynamic>;
     return data
         .map((row) => Order.fromJson(row as Map<String, dynamic>))
         .toList();
   }
-
-  void _subscribeRealtime(String userId) {
-    final supabase = ref.read(supabaseClientProvider);
-
-    // TODO: ensure schema/table names + user_id filter match your DB/RLS setup.
-    _channel = supabase
-        .channel('orders-realtime-$userId')
-        ..onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: kOrdersTableName,
-          // TODO: fill in the correct user_id column name if yours differs.
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'user_id',
-            value: userId,
-          ),
-          callback: (payload) {
-            final newRecord = payload.newRecord as Map<String, dynamic>?;
-            if (newRecord == null) return;
-
-            // TODO: if your column names differ, map them into Order.fromJson keys here.
-            final updatedOrder = Order.fromJson(newRecord);
-
-            final current = state.value ?? const [];
-            final idx = current.indexWhere((o) => o.id == updatedOrder.id);
-            final next = List<Order>.from(current);
-            if (idx >= 0) {
-              next[idx] = updatedOrder;
-            } else {
-              next.insert(0, updatedOrder);
-            }
-            state = AsyncValue.data(next);
-          },
-        )
-        ..subscribe();
-  }
 }
-

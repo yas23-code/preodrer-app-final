@@ -7,6 +7,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../menu/models/menu_item.dart';
 import '../models/cart_model.dart';
 import '../repositories/cart_repository.dart';
+import '../../orders/providers/orders_provider.dart';
 
 final cartControllerProvider =
     AsyncNotifierProvider<CartController, CartState>(CartController.new);
@@ -176,6 +177,10 @@ class CartController extends AsyncNotifier<CartState> {
 
       // 3. Successfully placed — clear cart
       await clear();
+      
+      // 4. Invalidate the orders provider so that it instantly fetches the new order
+      // when the customer navigates to the Orders tab.
+      ref.invalidate(ordersProvider);
     } catch (e) {
       debugPrint('[CartController] placeOrder -> DB failure: $e');
       throw Exception('Failed to place order: $e');

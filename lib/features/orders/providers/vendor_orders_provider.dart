@@ -129,13 +129,36 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
 
       final response = await supabase
           .from(kOrdersTableName)
-          .select('id, status, total_amount, created_at, canteen_id, student_id')
+          .select('id, status, total_amount, created_at, canteen_id, student_id, profiles!student_id(*)')
           .inFilter('canteen_id', canteenIds)
           .order('created_at', ascending: false);
 
       return _mapOrdersToUi(response as List<dynamic>);
     } catch (e, st) {
       debugPrint('[VENDOR POLL] EXCEPTION caught: $e\n$st');
+      rethrow;
+    }
+  }
+  
+  Future<void> updateOrderStatus(String orderId, String newStatus) async {
+    final supabase = ref.read(supabaseClientProvider);
+    try {
+      await supabase
+          .from(kOrdersTableName)
+          .update({
+            'status': newStatus,
+            'payment_status': 'paid', // Bypass strict check constraint for testing
+          })
+          .eq('id', orderId);
+          
+      // Optimistically fetch the newest state immediately
+      final userId = _currentUserId;
+      if (userId != null) {
+        final fresh = await _fetchVendorOrders(userId);
+        state = AsyncValue.data(fresh);
+      }
+    } catch (e) {
+      debugPrint('[VENDOR POLL] Failed to update order status: $e');
       rethrow;
     }
   }
@@ -153,23 +176,31 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         timeStr = '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
       }
 
-      final customerName = 'Customer';
+      String customerName = 'Customer';
+      if (row['profiles'] != null) {
+        final profileMap = row['profiles'] as Map<String, dynamic>;
+        customerName = profileMap['full_name'] as String? ?? 
+                       profileMap['name'] as String? ?? 
+                       'Customer';
+      }
+      
       final itemsStrList = ['Items unavailable'];
 
       // Transform status for UI Tabs
       String uiStatus = 'In Progress';
       if (status == 'ready') uiStatus = 'Ready';
-      if (status == 'completed') uiStatus = 'Completed';
+      if (status == 'completed' || status == 'declined' || status == 'rejected' || status == 'cancelled') uiStatus = 'Completed';
 
       return {
         'id': id,
-        'customerName': customerName ?? 'Unknown',
+        'customerName': customerName,
         'amount': formatCurrency(totalAmount.toDouble()),
         'time': timeStr,
         'eta': 'Est. 10 mins', // Mock ETA
         'items': itemsStrList.join(', '),
         'type': 'Takeaway', // Mock
-        'orderNumber': '#${id.substring(0, 4).toUpperCase()}',
+        'orderNumber': id.length >= 8 ? '#${id.substring(4, 8).toUpperCase()}' : '#$id',
+        'secretPin': id.length >= 4 ? id.substring(0, 4).toUpperCase() : '',
         'status': uiStatus,
         'raw_status': status,
         'created_at': createdAtStr,

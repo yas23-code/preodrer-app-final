@@ -22,13 +22,24 @@ class OrdersScreen extends ConsumerWidget {
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final order = orders[index];
+          final displayId = order.id.length >= 8 ? order.id.substring(4, 8).toUpperCase() : order.id;
+          final secretPin = order.id.length >= 4 ? order.id.substring(0, 4).toUpperCase() : '----';
           return ListTile(
-            title: Text('Order #${order.id}'),
-            subtitle: Text(
-              order.createdAt == null ? '—' : formatDate(order.createdAt!),
+            title: Text('Order #$displayId', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(order.createdAt == null ? '—' : formatDate(order.createdAt!)),
+                if (order.status == 'ready') ...[
+                  const SizedBox(height: 8),
+                  Text('Secret Pickup PIN: $secretPin', 
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple.shade700, fontSize: 16)),
+                ],
+                const SizedBox(height: 8),
+                OrderStatusBadge(status: order.status),
+              ],
             ),
-            trailing: OrderStatusBadge(status: order.status),
-            onTap: () => context.go('/order/${order.id}'),
+            onTap: () => context.push('/order/${order.id}'),
           );
         },
       ),

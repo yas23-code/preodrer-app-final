@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
 import '../models/order.dart';
@@ -20,8 +22,22 @@ class OrderDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final supabase = ref.read(supabaseClientProvider);
 
+    final displayId = orderId.length >= 8 ? orderId.substring(4, 8).toUpperCase() : orderId;
+    final secretPin = orderId.length >= 4 ? orderId.substring(0, 4).toUpperCase() : '----';
+
     return Scaffold(
-      appBar: AppBar(title: Text('Order #$orderId')),
+      appBar: AppBar(
+        title: Text('Order #$displayId'),
+        leading: BackButton(
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/orders');
+            }
+          },
+        ),
+      ),
       body: FutureBuilder(
         future: _fetchOrder(supabase),
         builder: (context, snapshot) {
@@ -41,6 +57,23 @@ class OrderDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(12),
             children: [
               OrderStatusBadge(status: order.status),
+              if (order.status == 'ready') ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.purple.shade200, width: 2),
+                  ),
+                  child: Column(
+                    children: [
+                      Text('Your Secret Pickup PIN', style: TextStyle(color: Colors.purple.shade700, fontWeight: FontWeight.bold)),
+                      Text(secretPin, style: TextStyle(fontSize: 32, letterSpacing: 8, fontWeight: FontWeight.w900, color: Colors.purple.shade900)),
+                    ]
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 'Placed: ${order.createdAt == null ? '—' : formatDate(order.createdAt!)}',
