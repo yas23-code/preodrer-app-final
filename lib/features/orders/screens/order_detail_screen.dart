@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
@@ -70,6 +71,21 @@ class OrderDetailScreen extends ConsumerWidget {
                     children: [
                       Text('Your Secret Pickup PIN', style: TextStyle(color: Colors.purple.shade700, fontWeight: FontWeight.bold)),
                       Text(secretPin, style: TextStyle(fontSize: 32, letterSpacing: 8, fontWeight: FontWeight.w900, color: Colors.purple.shade900)),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: QrImageView(
+                          data: secretPin,
+                          version: QrVersions.auto,
+                          size: 160.0,
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                     ]
                   ),
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/vendor_orders_provider.dart';
 import '../../../core/supabase_client.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 final vendorCanteenProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
@@ -40,6 +41,80 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
 
   void _handleSignOut() {
     ref.read(authControllerProvider.notifier).signOut();
+  }
+
+  Future<void> _processCompletion({bool isQr = false}) async {
+    try {
+      final input = _pickupCodeController.text.trim().toUpperCase();
+      if (input.isEmpty) return;
+
+      final allOrders = ref.read(vendorOrdersProvider).value ?? [];
+      final matchingOrders = allOrders.where((o) {
+        if (o['raw_status'] != 'ready') return false;
+        // Fallback to substring if secretPin was cached rigidly before our update
+        final pinVal = o['secretPin']?.toString() ?? (o['id'] as String).substring(0, 4).toUpperCase();
+        return pinVal == input;
+      }).toList();
+
+      if (matchingOrders.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isQr ? 'Invalid QR code. Please try again.' : 'The PIN was wrong or order is not Ready.')),
+        );
+        return;
+      }
+      
+      final match = matchingOrders.first;
+      
+      await ref.read(vendorOrdersProvider.notifier).updateOrderStatus(match['id'], 'completed');
+      _pickupCodeController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order Completed successfully!')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Verification Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('UI/Verification Error: $e')),
+        );
+      }
+    }
+  }
+
+  void _showScannerDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Scan Order QR'),
+          content: SizedBox(
+            width: 300,
+            height: 300,
+            child: MobileScanner(
+              onDetect: (capture) {
+                final List<Barcode> barcodes = capture.barcodes;
+                for (final barcode in barcodes) {
+                  final code = barcode.rawValue;
+                  if (code != null && code.isNotEmpty) {
+                    Navigator.of(context).pop(); // Close dialog
+                    _pickupCodeController.text = code.toUpperCase();
+                    _processCompletion(isQr: true);
+                    break;
+                  }
+                }
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -161,7 +236,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                       Text('Complete an Order', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       OutlinedButton.icon(
-                        onPressed: () {},
+                        onPressed: _showScannerDialog,
                         icon: const Icon(Icons.qr_code_scanner),
                         label: const Text('Scan QR Code'),
                         style: OutlinedButton.styleFrom(
@@ -196,44 +271,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                           ),
                           const SizedBox(width: 8),
                           FilledButton(
-                            onPressed: () async {
-                              try {
-                                final input = _pickupCodeController.text.trim().toUpperCase();
-                                if (input.isEmpty) return;
-
-                                final allOrders = ref.read(vendorOrdersProvider).value ?? [];
-                                final matchingOrders = allOrders.where((o) {
-                                  if (o['raw_status'] != 'ready') return false;
-                                  // Fallback to substring if secretPin was cached rigidly before our update
-                                  final pinVal = o['secretPin']?.toString() ?? (o['id'] as String).substring(0, 4).toUpperCase();
-                                  return pinVal == input;
-                                }).toList();
-
-                                if (matchingOrders.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('The PIN was wrong or order is not Ready.')),
-                                  );
-                                  return;
-                                }
-                                
-                                final match = matchingOrders.first;
-                                
-                                await ref.read(vendorOrdersProvider.notifier).updateOrderStatus(match['id'], 'completed');
-                                _pickupCodeController.clear();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Order Completed successfully!')),
-                                  );
-                                }
-                              } catch (e) {
-                                debugPrint('Verification Error: $e');
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('UI/Verification Error: $e')),
-                                  );
-                                }
-                              }
-                            },
+                            onPressed: () => _processCompletion(isQr: false),
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
