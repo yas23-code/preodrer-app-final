@@ -7,11 +7,9 @@ void main() async {
   );
 
   final res = await supabase.from('menu_items').select().limit(1);
-  print('Menu Item: \$res');
-  
   if (res.isNotEmpty) {
-    final item = res.first;
-    print('Item ID type: \${item['id'].runtimeType}');
-    print('Item ID: \${item['id']}');
+    print("Columns: ${res.first.keys.toList()}");
+  } else {
+    print("Table is empty but accessible.");
   }
 }

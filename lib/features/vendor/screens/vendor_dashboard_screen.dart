@@ -4,6 +4,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/vendor_orders_provider.dart';
 import '../../../core/supabase_client.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'manage_menu_screen.dart';
 
 final vendorCanteenProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
@@ -195,7 +196,14 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                     ActionChip(
                       avatar: const Icon(Icons.restaurant_menu, size: 16),
                       label: const Text('Manage Menu'),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ManageMenuScreen(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(width: 8),
                     ActionChip(

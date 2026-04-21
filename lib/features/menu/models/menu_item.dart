@@ -13,8 +13,9 @@ abstract class MenuItem with _$MenuItem {
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'category_id') String? categoryId,
     @JsonKey(name: 'canteen_id') String? canteenId,
-    @Default(true) bool isAvailable,
+    @JsonKey(name: 'is_available') @Default(true) bool isAvailable,
     @JsonKey(name: 'prep_time') int? prepTime,
+    @JsonKey(name: 'packing_charge') @Default(0.0) double packingCharge,
   }) = _MenuItem;
 
   factory MenuItem.fromJson(Map<String, dynamic> json) => _$MenuItemFromJson(json);

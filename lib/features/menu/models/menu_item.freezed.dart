@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MenuItem {
 
- String get id; String get name; String? get description; double get price;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'category_id') String? get categoryId;@JsonKey(name: 'canteen_id') String? get canteenId; bool get isAvailable;@JsonKey(name: 'prep_time') int? get prepTime;
+ String get id; String get name; String? get description; double get price;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'category_id') String? get categoryId;@JsonKey(name: 'canteen_id') String? get canteenId;@JsonKey(name: 'is_available') bool get isAvailable;@JsonKey(name: 'prep_time') int? get prepTime;@JsonKey(name: 'packing_charge') double get packingCharge;
 /// Create a copy of MenuItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $MenuItemCopyWith<MenuItem> get copyWith => _$MenuItemCopyWithImpl<MenuItem>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MenuItem&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.isAvailable, isAvailable) || other.isAvailable == isAvailable)&&(identical(other.prepTime, prepTime) || other.prepTime == prepTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MenuItem&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.isAvailable, isAvailable) || other.isAvailable == isAvailable)&&(identical(other.prepTime, prepTime) || other.prepTime == prepTime)&&(identical(other.packingCharge, packingCharge) || other.packingCharge == packingCharge));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,price,imageUrl,categoryId,canteenId,isAvailable,prepTime);
+int get hashCode => Object.hash(runtimeType,id,name,description,price,imageUrl,categoryId,canteenId,isAvailable,prepTime,packingCharge);
 
 @override
 String toString() {
-  return 'MenuItem(id: $id, name: $name, description: $description, price: $price, imageUrl: $imageUrl, categoryId: $categoryId, canteenId: $canteenId, isAvailable: $isAvailable, prepTime: $prepTime)';
+  return 'MenuItem(id: $id, name: $name, description: $description, price: $price, imageUrl: $imageUrl, categoryId: $categoryId, canteenId: $canteenId, isAvailable: $isAvailable, prepTime: $prepTime, packingCharge: $packingCharge)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $MenuItemCopyWith<$Res>  {
   factory $MenuItemCopyWith(MenuItem value, $Res Function(MenuItem) _then) = _$MenuItemCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? description, double price,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'canteen_id') String? canteenId, bool isAvailable,@JsonKey(name: 'prep_time') int? prepTime
+ String id, String name, String? description, double price,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'canteen_id') String? canteenId,@JsonKey(name: 'is_available') bool isAvailable,@JsonKey(name: 'prep_time') int? prepTime,@JsonKey(name: 'packing_charge') double packingCharge
 });
 
 
@@ -65,7 +65,7 @@ class _$MenuItemCopyWithImpl<$Res>
 
 /// Create a copy of MenuItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? price = null,Object? imageUrl = freezed,Object? categoryId = freezed,Object? canteenId = freezed,Object? isAvailable = null,Object? prepTime = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? price = null,Object? imageUrl = freezed,Object? categoryId = freezed,Object? canteenId = freezed,Object? isAvailable = null,Object? prepTime = freezed,Object? packingCharge = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -76,7 +76,8 @@ as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // 
 as String?,canteenId: freezed == canteenId ? _self.canteenId : canteenId // ignore: cast_nullable_to_non_nullable
 as String?,isAvailable: null == isAvailable ? _self.isAvailable : isAvailable // ignore: cast_nullable_to_non_nullable
 as bool,prepTime: freezed == prepTime ? _self.prepTime : prepTime // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,packingCharge: null == packingCharge ? _self.packingCharge : packingCharge // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  double price, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'canteen_id')  String? canteenId,  bool isAvailable, @JsonKey(name: 'prep_time')  int? prepTime)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  double price, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'canteen_id')  String? canteenId, @JsonKey(name: 'is_available')  bool isAvailable, @JsonKey(name: 'prep_time')  int? prepTime, @JsonKey(name: 'packing_charge')  double packingCharge)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MenuItem() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl,_that.categoryId,_that.canteenId,_that.isAvailable,_that.prepTime);case _:
+return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl,_that.categoryId,_that.canteenId,_that.isAvailable,_that.prepTime,_that.packingCharge);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  double price, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'canteen_id')  String? canteenId,  bool isAvailable, @JsonKey(name: 'prep_time')  int? prepTime)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? description,  double price, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'canteen_id')  String? canteenId, @JsonKey(name: 'is_available')  bool isAvailable, @JsonKey(name: 'prep_time')  int? prepTime, @JsonKey(name: 'packing_charge')  double packingCharge)  $default,) {final _that = this;
 switch (_that) {
 case _MenuItem():
-return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl,_that.categoryId,_that.canteenId,_that.isAvailable,_that.prepTime);case _:
+return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl,_that.categoryId,_that.canteenId,_that.isAvailable,_that.prepTime,_that.packingCharge);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  double price, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'canteen_id')  String? canteenId,  bool isAvailable, @JsonKey(name: 'prep_time')  int? prepTime)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? description,  double price, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'canteen_id')  String? canteenId, @JsonKey(name: 'is_available')  bool isAvailable, @JsonKey(name: 'prep_time')  int? prepTime, @JsonKey(name: 'packing_charge')  double packingCharge)?  $default,) {final _that = this;
 switch (_that) {
 case _MenuItem() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl,_that.categoryId,_that.canteenId,_that.isAvailable,_that.prepTime);case _:
+return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl,_that.categoryId,_that.canteenId,_that.isAvailable,_that.prepTime,_that.packingCharge);case _:
   return null;
 
 }
@@ -217,7 +218,7 @@ return $default(_that.id,_that.name,_that.description,_that.price,_that.imageUrl
 @JsonSerializable()
 
 class _MenuItem implements MenuItem {
-  const _MenuItem({required this.id, required this.name, this.description, required this.price, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'category_id') this.categoryId, @JsonKey(name: 'canteen_id') this.canteenId, this.isAvailable = true, @JsonKey(name: 'prep_time') this.prepTime});
+  const _MenuItem({required this.id, required this.name, this.description, required this.price, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'category_id') this.categoryId, @JsonKey(name: 'canteen_id') this.canteenId, @JsonKey(name: 'is_available') this.isAvailable = true, @JsonKey(name: 'prep_time') this.prepTime, @JsonKey(name: 'packing_charge') this.packingCharge = 0.0});
   factory _MenuItem.fromJson(Map<String, dynamic> json) => _$MenuItemFromJson(json);
 
 @override final  String id;
@@ -227,8 +228,9 @@ class _MenuItem implements MenuItem {
 @override@JsonKey(name: 'image_url') final  String? imageUrl;
 @override@JsonKey(name: 'category_id') final  String? categoryId;
 @override@JsonKey(name: 'canteen_id') final  String? canteenId;
-@override@JsonKey() final  bool isAvailable;
+@override@JsonKey(name: 'is_available') final  bool isAvailable;
 @override@JsonKey(name: 'prep_time') final  int? prepTime;
+@override@JsonKey(name: 'packing_charge') final  double packingCharge;
 
 /// Create a copy of MenuItem
 /// with the given fields replaced by the non-null parameter values.
@@ -243,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MenuItem&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.isAvailable, isAvailable) || other.isAvailable == isAvailable)&&(identical(other.prepTime, prepTime) || other.prepTime == prepTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MenuItem&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.price, price) || other.price == price)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.isAvailable, isAvailable) || other.isAvailable == isAvailable)&&(identical(other.prepTime, prepTime) || other.prepTime == prepTime)&&(identical(other.packingCharge, packingCharge) || other.packingCharge == packingCharge));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,price,imageUrl,categoryId,canteenId,isAvailable,prepTime);
+int get hashCode => Object.hash(runtimeType,id,name,description,price,imageUrl,categoryId,canteenId,isAvailable,prepTime,packingCharge);
 
 @override
 String toString() {
-  return 'MenuItem(id: $id, name: $name, description: $description, price: $price, imageUrl: $imageUrl, categoryId: $categoryId, canteenId: $canteenId, isAvailable: $isAvailable, prepTime: $prepTime)';
+  return 'MenuItem(id: $id, name: $name, description: $description, price: $price, imageUrl: $imageUrl, categoryId: $categoryId, canteenId: $canteenId, isAvailable: $isAvailable, prepTime: $prepTime, packingCharge: $packingCharge)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$MenuItemCopyWith<$Res> implements $MenuItemCopyWith<$Res>
   factory _$MenuItemCopyWith(_MenuItem value, $Res Function(_MenuItem) _then) = __$MenuItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? description, double price,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'canteen_id') String? canteenId, bool isAvailable,@JsonKey(name: 'prep_time') int? prepTime
+ String id, String name, String? description, double price,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'canteen_id') String? canteenId,@JsonKey(name: 'is_available') bool isAvailable,@JsonKey(name: 'prep_time') int? prepTime,@JsonKey(name: 'packing_charge') double packingCharge
 });
 
 
@@ -280,7 +282,7 @@ class __$MenuItemCopyWithImpl<$Res>
 
 /// Create a copy of MenuItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? price = null,Object? imageUrl = freezed,Object? categoryId = freezed,Object? canteenId = freezed,Object? isAvailable = null,Object? prepTime = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = freezed,Object? price = null,Object? imageUrl = freezed,Object? categoryId = freezed,Object? canteenId = freezed,Object? isAvailable = null,Object? prepTime = freezed,Object? packingCharge = null,}) {
   return _then(_MenuItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -291,7 +293,8 @@ as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // 
 as String?,canteenId: freezed == canteenId ? _self.canteenId : canteenId // ignore: cast_nullable_to_non_nullable
 as String?,isAvailable: null == isAvailable ? _self.isAvailable : isAvailable // ignore: cast_nullable_to_non_nullable
 as bool,prepTime: freezed == prepTime ? _self.prepTime : prepTime // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,packingCharge: null == packingCharge ? _self.packingCharge : packingCharge // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 

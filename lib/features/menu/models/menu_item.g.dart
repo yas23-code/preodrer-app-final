@@ -14,8 +14,9 @@ _MenuItem _$MenuItemFromJson(Map<String, dynamic> json) => _MenuItem(
   imageUrl: json['image_url'] as String?,
   categoryId: json['category_id'] as String?,
   canteenId: json['canteen_id'] as String?,
-  isAvailable: json['isAvailable'] as bool? ?? true,
+  isAvailable: json['is_available'] as bool? ?? true,
   prepTime: (json['prep_time'] as num?)?.toInt(),
+  packingCharge: (json['packing_charge'] as num?)?.toDouble() ?? 0.0,
 );
 
 Map<String, dynamic> _$MenuItemToJson(_MenuItem instance) => <String, dynamic>{
@@ -26,6 +27,7 @@ Map<String, dynamic> _$MenuItemToJson(_MenuItem instance) => <String, dynamic>{
   'image_url': instance.imageUrl,
   'category_id': instance.categoryId,
   'canteen_id': instance.canteenId,
-  'isAvailable': instance.isAvailable,
+  'is_available': instance.isAvailable,
   'prep_time': instance.prepTime,
+  'packing_charge': instance.packingCharge,
 };
