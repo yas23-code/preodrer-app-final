@@ -151,6 +151,19 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
           })
           .eq('id', orderId);
           
+      // If the vendor marked the order as ready, notify the customer
+      if (newStatus == 'ready') {
+        try {
+          final res = await supabase.functions.invoke(
+            'notify-order-ready',
+            body: {'order_id': orderId},
+          );
+          debugPrint('[VENDOR POLL] notify-order-ready success! Status: ${res.status}, Body: ${res.data}');
+        } catch (funcErr) {
+          debugPrint('[VENDOR POLL] Error calling notify-order-ready: $funcErr');
+        }
+      }
+
       // Optimistically fetch the newest state immediately
       final userId = _currentUserId;
       if (userId != null) {

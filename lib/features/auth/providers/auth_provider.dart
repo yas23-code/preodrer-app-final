@@ -212,19 +212,25 @@ class AuthController extends AsyncNotifier<User?> {
       final token = await messaging.getToken();
       if (token != null) {
         final supabase = ref.read(supabaseClientProvider);
-        await supabase.from('user_device_tokens').upsert({
-          'user_id': userId,
-          'fcm_token': token,
-        });
+        await supabase.functions.invoke(
+          'register-fcm-token',
+          body: {
+            'user_id': userId,
+            'fcm_token': token,
+          },
+        );
       }
 
       await _fcmTokenSubscription?.cancel();
       _fcmTokenSubscription = messaging.onTokenRefresh.listen((newToken) async {
         final supabase = ref.read(supabaseClientProvider);
-        await supabase.from('user_device_tokens').upsert({
-          'user_id': userId,
-          'fcm_token': newToken,
-        });
+        await supabase.functions.invoke(
+          'register-fcm-token',
+          body: {
+            'user_id': userId,
+            'fcm_token': newToken,
+          },
+        );
       });
     } catch (e) {
       developer.log('Error syncing FCM token: $e', name: 'AuthController');

@@ -131,7 +131,14 @@ serve(async (req: Request) => {
               const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
 
               if (serviceAccountStr && projectId) {
-                const serviceAccount = JSON.parse(atob(serviceAccountStr));
+                const cleanB64 = serviceAccountStr.replace(/[^A-Za-z0-9+/=]/g, "");
+                let serviceAccount;
+                try {
+                  serviceAccount = JSON.parse(atob(cleanB64));
+                } catch (parseErr: any) {
+                  throw new Error(`Failed to parse service account JSON: ${parseErr.message}`);
+                }
+
                 const jwtClient = new JWT({
                   email: serviceAccount.client_email,
                   key: serviceAccount.private_key,
