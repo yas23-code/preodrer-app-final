@@ -129,7 +129,7 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
 
       final response = await supabase
           .from(kOrdersTableName)
-          .select('id, status, total_amount, created_at, canteen_id, student_id, profiles!student_id(*)')
+          .select('id, status, total_amount, created_at, canteen_id, student_id, profiles!student_id(*), order_items(*, menu_items(*))')
           .inFilter('canteen_id', canteenIds)
           .order('created_at', ascending: false);
 
@@ -197,7 +197,42 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
                        'Customer';
       }
       
-      final itemsStrList = ['Items unavailable'];
+      final orderItemsData = row['order_items'] as List<dynamic>? ?? [];
+      final itemsList = <Map<String, dynamic>>[];
+      final fallbackItemsStr = <String>[];
+
+      if (orderItemsData.isNotEmpty) {
+        for (final item in orderItemsData) {
+          final qty = item['quantity'] as int? ?? 1;
+          final notes = item['notes'] as String?;
+          final variants = item['variants'] as String?;
+          
+          String itemName = 'Unknown Item';
+          if (item['menu_items'] != null) {
+            itemName = item['menu_items']['name'] as String? ?? 'Unknown Item';
+          }
+          
+          final title = '${qty}x $itemName';
+          
+          List<String> extras = [];
+          if (variants != null && variants.isNotEmpty) extras.add(variants);
+          if (notes != null && notes.isNotEmpty) extras.add('Note: $notes');
+          
+          final subtitle = extras.isNotEmpty ? extras.join(', ') : null;
+          
+          itemsList.add({
+            'title': title,
+            'subtitle': subtitle,
+          });
+          fallbackItemsStr.add(title);
+        }
+      } else {
+        itemsList.add({
+          'title': 'No items found',
+          'subtitle': null,
+        });
+        fallbackItemsStr.add('No items found');
+      }
 
       // Transform status for UI Tabs
       String uiStatus = 'In Progress';
@@ -209,9 +244,10 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         'customerName': customerName,
         'amount': formatCurrency(totalAmount.toDouble()),
         'time': timeStr,
-        'eta': 'Est. 10 mins', // Mock ETA
-        'items': itemsStrList.join(', '),
-        'type': 'Takeaway', // Mock
+        'eta': 'Est. 10 mins',
+        'items': fallbackItemsStr.join(', '),
+        'items_list': itemsList,
+        'type': 'Takeaway',
         'orderNumber': id.length >= 8 ? '#${id.substring(4, 8).toUpperCase()}' : '#$id',
         'secretPin': id.length >= 4 ? id.substring(0, 4).toUpperCase() : '',
         'status': uiStatus,

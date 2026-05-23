@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/providers/auth_provider.dart';
+import '../features/auth/providers/role_provider.dart';
 import '../features/auth/screens/landing_screen.dart';
 import '../features/cart/providers/cart_controller.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -43,6 +44,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Authenticated shell (with bottom nav) ─────────────────────
       ShellRoute(
         builder: (context, state, child) {
+          final roleAsync = ref.watch(roleProvider);
+          final isVendor = roleAsync.value == AppRole.vendor;
+
+          // Vendors should not see the Customer Bottom Navigation Bar
+          if (isVendor) {
+            return child;
+          }
+
           final location = state.uri.path;
           final index = switch (location) {
             '/home' => 0,

@@ -207,18 +207,6 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                     ),
                     const SizedBox(width: 8),
                     ActionChip(
-                      avatar: const Icon(Icons.local_offer, size: 16),
-                      label: const Text('Coupons'),
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 8),
-                    ActionChip(
-                      avatar: const Icon(Icons.settings, size: 16),
-                      label: const Text('Settings'),
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 8),
-                    ActionChip(
                       avatar: const Icon(Icons.logout, size: 16),
                       label: const Text('Sign Out'),
                       onPressed: _handleSignOut,
@@ -464,9 +452,21 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                   Icon(Icons.receipt_long, size: 20, color: colorScheme.onSurfaceVariant),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      order['items'],
-                      style: theme.textTheme.bodyMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: (order['items_list'] as List<dynamic>? ?? []).map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item['title'] as String, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                              if (item['subtitle'] != null)
+                                Text(item['subtitle'] as String, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ],
