@@ -22,7 +22,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 Future<void> _initLocalNotifications() async {
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidInit = AndroidInitializationSettings('ic_notification');
   const iOSInit = DarwinInitializationSettings();
   const initSettings = InitializationSettings(android: androidInit, iOS: iOSInit);
   await _localNotifications.initialize(initSettings);
@@ -63,6 +63,7 @@ Future<void> _initFirebaseMessaging() async {
           'Default',
           importance: Importance.max,
           priority: Priority.high,
+          icon: 'ic_notification',
         ),
         iOS: DarwinNotificationDetails(),
       ),
@@ -83,6 +84,7 @@ void showLocalNotification(String title, String body) {
           'Default',
           importance: Importance.max,
           priority: Priority.high,
+          icon: 'ic_notification',
         ),
         iOS: DarwinNotificationDetails(),
       ),
