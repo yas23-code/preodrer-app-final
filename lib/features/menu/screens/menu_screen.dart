@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../cart/providers/cart_controller.dart';
 import '../providers/menu_provider.dart';
 import '../../../shared/widgets/food_item_card.dart';
+import '../../../shared/widgets/customer_bottom_navbar.dart';
 
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
@@ -35,6 +36,17 @@ class MenuScreen extends ConsumerWidget {
                   debugPrint('[UI_WIRING] Successfully read cartControllerProvider.notifier');
                   notifier.addItem(item);
                   debugPrint('[UI_WIRING] successfully called addItem(item)');
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${item.name} added to cart'),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 } catch (e, st) {
                   debugPrint('[UI_WIRING] Error calling addItem: $e\n$st');
                 }
@@ -43,6 +55,7 @@ class MenuScreen extends ConsumerWidget {
           );
         },
       ),
+      bottomNavigationBar: const CustomerBottomNavBar(currentIndex: 0),
       ),
     );
   }

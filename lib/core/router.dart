@@ -13,6 +13,7 @@ import '../features/orders/screens/orders_screen.dart';
 import '../features/payment/screens/payment_webview_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/menu/screens/menu_screen.dart';
+import '../shared/widgets/customer_bottom_navbar.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
@@ -61,49 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return Scaffold(
             appBar: AppBar(title: Text(title)),
             body: child,
-            bottomNavigationBar: Consumer(
-              builder: (context, ref, _) {
-                final cartState = ref.watch(cartControllerProvider).asData?.value;
-                final itemCount = cartState?.itemCount ?? 0;
-
-                return BottomNavigationBar(
-                  currentIndex: index,
-                  type: BottomNavigationBarType.fixed,
-                  onTap: (i) {
-                    final target = switch (i) {
-                      0 => '/home',
-                      1 => '/cart',
-                      2 => '/orders',
-                      3 => '/profile',
-                      _ => '/home',
-                    };
-                    context.go(target);
-                  },
-                  items: [
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.home_outlined),
-                      label: 'Home',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Badge(
-                        isLabelVisible: itemCount > 0,
-                        label: Text('$itemCount'),
-                        child: const Icon(Icons.shopping_cart_outlined),
-                      ),
-                      label: 'Cart',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.receipt_long_outlined),
-                      label: 'Orders',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.person_outline),
-                      label: 'Profile',
-                    ),
-                  ],
-                );
-              },
-            ),
+            bottomNavigationBar: CustomerBottomNavBar(currentIndex: index),
           );
         },
         routes: [
