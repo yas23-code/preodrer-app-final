@@ -12,7 +12,7 @@ _Canteen _$CanteenFromJson(Map<String, dynamic> json) => _Canteen(
   location: json['location'] as String?,
   imageUrl: json['image_url'] as String?,
   vendorId: json['vendor_id'] as String?,
-  isOpen: json['isOpen'] as bool? ?? true,
+  isOpen: json['is_open'] as bool? ?? true,
 );
 
 Map<String, dynamic> _$CanteenToJson(_Canteen instance) => <String, dynamic>{
@@ -21,5 +21,5 @@ Map<String, dynamic> _$CanteenToJson(_Canteen instance) => <String, dynamic>{
   'location': instance.location,
   'image_url': instance.imageUrl,
   'vendor_id': instance.vendorId,
-  'isOpen': instance.isOpen,
+  'is_open': instance.isOpen,
 };

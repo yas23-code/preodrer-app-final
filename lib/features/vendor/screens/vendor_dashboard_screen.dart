@@ -5,6 +5,7 @@ import '../../orders/providers/vendor_orders_provider.dart';
 import '../../../core/supabase_client.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'manage_menu_screen.dart';
+import '../../canteen/providers/canteen_provider.dart';
 
 final vendorCanteenProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
@@ -15,7 +16,7 @@ final vendorCanteenProvider = FutureProvider.autoDispose<Map<String, dynamic>?>(
   
   final res = await supabase
       .from('canteens')
-      .select('name, location')
+      .select('id, name, location, is_open')
       .eq('vendor_id', userId)
       .maybeSingle();
       
@@ -30,7 +31,8 @@ class VendorDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
-  bool _isOpen = true;
+  bool? _isOpen;
+  bool _isSaving = false;
   int _selectedTab = 0; // 0: In Progress, 1: Ready, 2: Completed
   final TextEditingController _pickupCodeController = TextEditingController();
 
@@ -131,6 +133,11 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
     final canteenName = canteenAsync.value?['name'] ?? 'Loading...';
     final canteenLocation = canteenAsync.value?['location'] ?? '';
 
+    // Initialize _isOpen from database if not set yet and database has resolved
+    if (_isOpen == null && canteenAsync.hasValue) {
+      _isOpen = canteenAsync.value?['is_open'] as bool? ?? true;
+    }
+
     debugPrint('[VENDOR UI] ordersAsync build: isLoading=${ordersAsync.isLoading}, hasError=${ordersAsync.hasError}, hasValue=${ordersAsync.hasValue}');
     if (ordersAsync.hasError) {
       debugPrint('[VENDOR UI] Error: ${ordersAsync.error}\n${ordersAsync.stackTrace}');
@@ -168,14 +175,66 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
         actions: [
           Row(
             children: [
-              Text(_isOpen ? 'Open' : 'Closed', style: theme.textTheme.labelMedium),
+              Text((_isOpen ?? true) ? 'Open' : 'Closed', style: theme.textTheme.labelMedium),
               Switch(
-                value: _isOpen,
-                onChanged: (val) {
-                  setState(() {
-                    _isOpen = val;
-                  });
-                },
+                value: _isOpen ?? true,
+                onChanged: _isSaving
+                    ? null
+                    : (val) async {
+                        final previousState = _isOpen;
+                        setState(() {
+                          _isOpen = val;
+                          _isSaving = true;
+                        });
+
+                        try {
+                          final supabase = ref.read(supabaseClientProvider);
+                          final userAsync = ref.read(authControllerProvider);
+                          final userId = userAsync.value?.id;
+                          final canteenData = canteenAsync.value;
+
+                          if (userId == null) {
+                            throw Exception("User is not authenticated");
+                          }
+
+                          if (canteenData != null && canteenData['id'] != null) {
+                            // Update existing canteen row
+                            await supabase
+                                .from('canteens')
+                                .update({'is_open': val})
+                                .eq('id', canteenData['id']);
+                          } else {
+                            // Insert a new canteen row if it doesn't exist yet
+                            await supabase.from('canteens').insert({
+                              'vendor_id': userId,
+                              'is_open': val,
+                              'name': 'My Canteen',
+                            });
+                          }
+
+                          // Refresh canteen provider so everything updates
+                          ref.invalidate(vendorCanteenProvider);
+                          // Also invalidate the customer-facing canteensProvider if testing on same device
+                          ref.invalidate(canteensProvider);
+                        } catch (e) {
+                          // Rollback on error
+                          setState(() {
+                            _isOpen = previousState;
+                          });
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to update availability: $e'),
+                                backgroundColor: theme.colorScheme.error,
+                              ),
+                            );
+                          }
+                        } finally {
+                          setState(() {
+                            _isSaving = false;
+                          });
+                        }
+                      },
               ),
             ],
           ),

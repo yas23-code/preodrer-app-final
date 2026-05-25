@@ -11,7 +11,7 @@ abstract class Canteen with _$Canteen {
     String? location,
     @JsonKey(name: 'image_url') String? imageUrl,
     @JsonKey(name: 'vendor_id') String? vendorId,
-    @Default(true) bool isOpen,
+    @JsonKey(name: 'is_open') @Default(true) bool isOpen,
   }) = _Canteen;
 
   factory Canteen.fromJson(Map<String, dynamic> json) => _$CanteenFromJson(json);
