@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../../../core/supabase_client.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -26,7 +27,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // Shop Owner controllers
   final _shopNameCtrl = TextEditingController();
+  final _shopCanteenNameCtrl = TextEditingController();
   final _shopEmailCtrl = TextEditingController();
+  final _shopPhoneCtrl = TextEditingController();
+  final _shopLocationCtrl = TextEditingController();
   final _shopPasswordCtrl = TextEditingController();
 
   bool _obscureLoginPw = true;
@@ -42,7 +46,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _signUpEmailCtrl.dispose();
     _signUpPasswordCtrl.dispose();
     _shopNameCtrl.dispose();
+    _shopCanteenNameCtrl.dispose();
     _shopEmailCtrl.dispose();
+    _shopPhoneCtrl.dispose();
+    _shopLocationCtrl.dispose();
     _shopPasswordCtrl.dispose();
     super.dispose();
   }
@@ -88,9 +95,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleShopOwnerSignUp() async {
     final name = _shopNameCtrl.text.trim();
+    final canteenName = _shopCanteenNameCtrl.text.trim();
     final email = _shopEmailCtrl.text.trim();
+    final phone = _shopPhoneCtrl.text.trim();
+    final location = _shopLocationCtrl.text.trim();
     final password = _shopPasswordCtrl.text.trim();
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+
+    if (name.isEmpty || canteenName.isEmpty || email.isEmpty || phone.isEmpty || location.isEmpty || password.isEmpty) {
       _showError('Please fill in all fields.');
       return;
     }
@@ -103,8 +114,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             email: email,
             password: password,
             fullName: name,
-            role: 'vendor',
+            role: 'customer', // Sign up as customer initially; role_gate will handle pending status
           );
+
+      final user = ref.read(authControllerProvider).asData?.value;
+      if (user == null) {
+        throw StateError('Sign-up failed to retrieve user session.');
+      }
+
+      final supabase = ref.read(supabaseClientProvider);
+      await supabase.from('canteen_registrations').insert({
+        'user_id': user.id,
+        'owner_name': name,
+        'canteen_name': canteenName,
+        'email': email,
+        'phone': phone,
+        'location': location,
+        'status': 'pending',
+      });
     });
   }
 
@@ -522,11 +549,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
 
-        const _AuthLabel('Your Name'),
+         const _AuthLabel('Your Name'),
         const SizedBox(height: 8),
         _AuthTextField(
           controller: _shopNameCtrl,
           hint: 'Shop Owner Name',
+        ),
+        const SizedBox(height: 16),
+        const _AuthLabel('Shop/Canteen Name'),
+        const SizedBox(height: 8),
+        _AuthTextField(
+          controller: _shopCanteenNameCtrl,
+          hint: 'e.g. Campus Corner Canteen',
         ),
         const SizedBox(height: 16),
         const _AuthLabel('Email'),
@@ -537,6 +571,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           textCapitalization: TextCapitalization.none,
+        ),
+        const SizedBox(height: 16),
+        const _AuthLabel('Phone Number'),
+        const SizedBox(height: 8),
+        _AuthTextField(
+          controller: _shopPhoneCtrl,
+          hint: 'e.g. +91 9876543210',
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 16),
+        const _AuthLabel('Location'),
+        const SizedBox(height: 8),
+        _AuthTextField(
+          controller: _shopLocationCtrl,
+          hint: 'e.g. Block C, Ground Floor',
         ),
         const SizedBox(height: 16),
         const _AuthLabel('Password'),

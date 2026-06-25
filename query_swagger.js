@@ -13,8 +13,8 @@ async function run() {
   const res = await fetch(`${url}/rest/v1/`, {
     headers: { apikey: key }
   });
+  console.log("Status:", res.status);
   const data = await res.json();
-  const definition = data.definitions.orders;
-  console.log(JSON.stringify(definition, null, 2));
+  console.log("Response:", data);
 }
 run();

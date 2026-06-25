@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/providers/role_provider.dart';
 import '../features/auth/screens/landing_screen.dart';
-import '../features/cart/providers/cart_controller.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/cart/screens/cart_screen.dart';
 import '../features/auth/widgets/role_gate.dart';
@@ -41,14 +40,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
 
-      // ── Authenticated shell (with bottom nav) ─────────────────────
       ShellRoute(
         builder: (context, state, child) {
           final roleAsync = ref.watch(roleProvider);
           final isVendor = roleAsync.value == AppRole.vendor;
+          final isSuperAdmin = roleAsync.value == AppRole.superadmin;
 
-          // Vendors should not see the Customer Bottom Navigation Bar
-          if (isVendor) {
+          // Vendors and Super Admins should not see the Customer Bottom Navigation Bar
+          if (isVendor || isSuperAdmin) {
             return child;
           }
 
