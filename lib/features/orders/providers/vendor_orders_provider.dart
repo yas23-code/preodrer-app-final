@@ -140,15 +140,23 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
     }
   }
   
-  Future<void> updateOrderStatus(String orderId, String newStatus) async {
+  Future<void> updateOrderStatus(String orderId, String newStatus, {String? rejectionReason}) async {
     final supabase = ref.read(supabaseClientProvider);
     try {
+      final Map<String, dynamic> updateData = {
+        'status': newStatus,
+        'payment_status': 'paid', // Bypass strict check constraint for testing
+      };
+      if (rejectionReason != null && rejectionReason.isNotEmpty) {
+        updateData['rejection_reason'] = rejectionReason;
+      }
+      if (newStatus == 'declined' || newStatus == 'rejected') {
+        updateData['refund_status'] = 'pending';
+      }
+      
       await supabase
           .from(kOrdersTableName)
-          .update({
-            'status': newStatus,
-            'payment_status': 'paid', // Bypass strict check constraint for testing
-          })
+          .update(updateData)
           .eq('id', orderId);
           
       // If the vendor marked the order as ready, notify the customer

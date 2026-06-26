@@ -537,7 +537,7 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => ref.read(vendorOrdersProvider.notifier).updateOrderStatus(orderId, 'declined'),
+                      onPressed: () => _promptDeclineReason(context, orderId),
                       child: const Text('Decline'),
                     ),
                   ),
@@ -589,6 +589,67 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _promptDeclineReason(BuildContext context, String orderId) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Decline Order', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Please enter a reason for declining this order:'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'e.g. Out of stock, Kitchen closed...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final text = controller.text.trim();
+                Navigator.pop(context, text.isNotEmpty ? text : 'Not specified');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDA291C),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Decline Order'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (reason != null && mounted) {
+      await ref.read(vendorOrdersProvider.notifier).updateOrderStatus(
+            orderId,
+            'declined',
+            rejectionReason: reason,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order declined successfully.'),
+            backgroundColor: Color(0xFFDA291C),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildFeatureCard(BuildContext context, String title, String description, IconData icon, Color bgColor, Color fgColor) {
