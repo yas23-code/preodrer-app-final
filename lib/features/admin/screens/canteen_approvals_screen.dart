@@ -6,6 +6,7 @@ import '../providers/refunds_provider.dart';
 import '../widgets/pending_refunds_view.dart';
 import '../widgets/income_analytics_view.dart';
 import '../widgets/daily_collection_view.dart';
+import '../widgets/admin_search_view.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/theme.dart';
 
@@ -58,18 +59,25 @@ class _CanteenApprovalsScreenState
             preferredSize: const Size.fromHeight(52),
             child: Container(
               color: Colors.white,
-              child: Row(
-                children: [
-                  _buildTab(0, 'Approvals', Icons.verified_rounded),
-                  _buildTab(
-                    1,
-                    'Refunds',
-                    Icons.currency_rupee_rounded,
-                    badgeCount: refundsStats.totalPendingCount,
-                  ),
-                  _buildTab(2, 'Analytics', Icons.bar_chart_rounded),
-                  _buildTab(3, 'Collection', Icons.today_rounded),
-                ],
+              width: double.infinity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    _buildTab(0, 'Approvals', Icons.verified_rounded),
+                    _buildTab(
+                      1,
+                      'Refunds',
+                      Icons.currency_rupee_rounded,
+                      badgeCount: refundsStats.totalPendingCount,
+                    ),
+                    _buildTab(2, 'Analytics', Icons.bar_chart_rounded),
+                    _buildTab(3, 'Collection', Icons.today_rounded),
+                    _buildTab(4, 'Search', Icons.search_rounded),
+                  ],
+                ),
               ),
             ),
           ),
@@ -80,7 +88,9 @@ class _CanteenApprovalsScreenState
                 ? const PendingRefundsView()
                 : _currentTabIndex == 2
                     ? const IncomeAnalyticsView()
-                    : const DailyCollectionView(),
+                    : _currentTabIndex == 3
+                        ? const DailyCollectionView()
+                        : const AdminSearchView(),
       ),
     );
   }
@@ -88,65 +98,60 @@ class _CanteenApprovalsScreenState
   Widget _buildTab(int index, String label, IconData icon,
       {int badgeCount = 0}) {
     final isSelected = _currentTabIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _currentTabIndex = index),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              bottom: BorderSide(
-                color: isSelected
-                    ? const Color(0xFFDA291C)
-                    : Colors.transparent,
-                width: 3,
-              ),
+    return GestureDetector(
+      onTap: () => setState(() => _currentTabIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected
+                  ? const Color(0xFFDA291C)
+                  : Colors.transparent,
+              width: 3,
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon,
-                  size: 16,
-                  color:
-                      isSelected ? const Color(0xFFDA291C) : Colors.grey[500]),
-              const SizedBox(width: 4),
-              Flexible(
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 16,
+                color:
+                    isSelected ? const Color(0xFFDA291C) : Colors.grey[500]),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 13,
+                color: isSelected ? const Color(0xFFDA291C) : Colors.grey[600],
+                fontFamily: 'Poppins',
+              ),
+            ),
+            if (badgeCount > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDA291C),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: 13,
-                    color: isSelected ? const Color(0xFFDA291C) : Colors.grey[600],
-                    fontFamily: 'Poppins',
+                  '$badgeCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (badgeCount > 0) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDA291C),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );
