@@ -9,16 +9,16 @@ import '../../auth/providers/auth_provider.dart';
 import '../models/order.dart';
 
 final ordersProvider =
-    AsyncNotifierProvider<OrdersController, List<Order>>(
+    AsyncNotifierProvider<OrdersController, List<Map<String, dynamic>>>(
       OrdersController.new,
     );
 
-class OrdersController extends AsyncNotifier<List<Order>> {
+class OrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
   String? _currentUserId;
   Timer? _pollTimer;
 
   @override
-  Future<List<Order>> build() async {
+  Future<List<Map<String, dynamic>>> build() async {
     // Cancel polling when this provider is disposed
     ref.onDispose(() {
       _stopPolling();
@@ -77,18 +77,16 @@ class OrdersController extends AsyncNotifier<List<Order>> {
     _pollTimer = null;
   }
 
-  Future<List<Order>> _fetchOrders(String userId) async {
+  Future<List<Map<String, dynamic>>> _fetchOrders(String userId) async {
     final supabase = ref.read(supabaseClientProvider);
 
     final response = await supabase
         .from(kOrdersTableName)
-        .select()
+        .select('*, canteens:canteen_id(*), order_items(*, menu_items(*))')
         .eq('student_id', userId)
         .order('created_at', ascending: false);
 
     final data = response as List<dynamic>;
-    return data
-        .map((row) => Order.fromJson(row as Map<String, dynamic>))
-        .toList();
+    return data.cast<Map<String, dynamic>>();
   }
 }

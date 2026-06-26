@@ -12,7 +12,20 @@
           "package_name": "com.abhinav.preorder_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "820783342425-5oocqemuofjt60s00ba60tsqdlm9p1fm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abhinav.preorder_app",
+            "certificate_hash": "1af5ee0386094069624dc014016e0767397ac2d3"
+          }
+        },
+        {
+          "client_id": "820783342425-l1fj7ge9qedqd086ftebiv64kcmi659h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAGaAY19EuTFtKiBclHOskgc3Tqg7kGwlk"
@@ -20,7 +33,41 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "820783342425-l1fj7ge9qedqd086ftebiv64kcmi659h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:820783342425:android:54bd0cd0e6cc3b676b6248",
+        "android_client_info": {
+          "package_name": "com.preorder.food"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "820783342425-l1fj7ge9qedqd086ftebiv64kcmi659h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGaAY19EuTFtKiBclHOskgc3Tqg7kGwlk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "820783342425-l1fj7ge9qedqd086ftebiv64kcmi659h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
