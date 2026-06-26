@@ -68,7 +68,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           };
 
           return Scaffold(
-            appBar: AppBar(title: Text(title)),
             body: child,
             bottomNavigationBar: CustomerBottomNavBar(currentIndex: index),
           );
