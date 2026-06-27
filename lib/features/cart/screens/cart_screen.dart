@@ -4,12 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/cart_controller.dart';
 import '../../canteen/providers/canteen_provider.dart';
-<<<<<<< HEAD
 import '../../auth/providers/auth_provider.dart';
-=======
 import '../../vendor/providers/coupons_provider.dart';
 import '../../menu/models/menu_item.dart';
->>>>>>> origin/friend-feature-new
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
