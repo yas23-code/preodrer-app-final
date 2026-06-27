@@ -19,7 +19,7 @@ headers = {
 # 2. Update profiles role column
 # 3. Insert canteen
 
-user_id = '3ee803dd-d325-424e-98e0-9c4a3a5302cf' # The registering vendor ID
+user_id = '3715b32c-9bd4-4a62-97c1-99f88b7b0fd1' # The other registering vendor ID
 
 print("--- Testing user_roles upsert ---")
 data = {

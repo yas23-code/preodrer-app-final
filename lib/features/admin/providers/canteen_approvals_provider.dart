@@ -90,10 +90,15 @@ class CanteenApprovalsNotifier extends Notifier<CanteenApprovalsState> {
   // Action: Approve Canteen
   Future<bool> approveCanteen(Map<String, dynamic> reg) async {
     final supabase = ref.read(supabaseClientProvider);
-    final userId = reg['user_id'] as String;
+    final userId = reg['user_id'] as String?;
     final canteenName = reg['canteen_name'] as String;
     final location = reg['location'] as String;
     final regId = reg['id'] as String;
+
+    if (userId == null || userId.isEmpty) {
+      debugPrint('[APPROVE_CANTEEN_ERROR] Cannot approve a registration without a valid user ID.');
+      return false;
+    }
 
     try {
       // 1. Assign Vendor role in user_roles
