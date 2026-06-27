@@ -4,7 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/cart_controller.dart';
 import '../../canteen/providers/canteen_provider.dart';
+<<<<<<< HEAD
 import '../../auth/providers/auth_provider.dart';
+=======
+import '../../vendor/providers/coupons_provider.dart';
+import '../../menu/models/menu_item.dart';
+>>>>>>> origin/friend-feature-new
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -20,6 +25,8 @@ class _CartScreenState extends ConsumerState<CartScreen>
   final TextEditingController _couponController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String _orderType = 'Dine In';
+  double _discountAmount = 0.0;
+  String? _appliedCouponCode;
 
   late final AnimationController _successAnimController;
   late final Animation<double> _successScaleAnim;
@@ -69,10 +76,10 @@ class _CartScreenState extends ConsumerState<CartScreen>
     super.dispose();
   }
 
-  Future<void> _placeOrder() async {
+  Future<void> _placeOrder(double total) async {
     setState(() => _isOrdering = true);
     try {
-      await ref.read(cartControllerProvider.notifier).placeOrder();
+      await ref.read(cartControllerProvider.notifier).placeOrder(customTotal: total);
       if (!mounted) return;
       setState(() {
         _isOrdering = false;
@@ -146,6 +153,8 @@ class _CartScreenState extends ConsumerState<CartScreen>
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartControllerProvider);
     final currentCanteen = ref.watch(currentCanteenProvider);
+    final canteenId = currentCanteen?.id ?? '';
+    final couponsAsync = ref.watch(canteenCouponsProvider(canteenId));
 
     debugPrint('[UI_WIRING] cart_screen.dart build() called');
     if (cartAsync.hasValue) {
@@ -167,8 +176,12 @@ class _CartScreenState extends ConsumerState<CartScreen>
         error: (e, _) => Center(child: Text('Failed to load cart: $e')),
         data: (cart) {
           final orderAmount = cart.totalAmount;
-          const platformFee = 2.50;
-          final total = orderAmount + platformFee;
+          final packingCharge = cart.lines.values.fold(
+            0.0,
+            (sum, line) => sum + ((line.item.packingCharge) * line.quantity),
+          );
+          final calculatedTotal = (orderAmount + packingCharge) - _discountAmount;
+          final total = calculatedTotal < 0 ? 0.0 : calculatedTotal;
 
           return Stack(
             children: [
@@ -244,8 +257,10 @@ class _CartScreenState extends ConsumerState<CartScreen>
                               // Coupon + Price breakdown
                               _buildCouponAndPriceSection(
                                 orderAmount: orderAmount,
-                                platformFee: platformFee,
+                                packingCharge: packingCharge,
+                                discountAmount: _discountAmount,
                                 total: total,
+                                couponsAsync: couponsAsync,
                               ),
 
                               const SizedBox(height: 14),
@@ -269,7 +284,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: _buildBottomBar(cart.lines.isEmpty),
+                  child: _buildBottomBar(cart.lines.isEmpty, total),
                 ),
             ],
           );
@@ -484,8 +499,10 @@ class _CartScreenState extends ConsumerState<CartScreen>
   // ─── Coupon + Price summary (all inline, compact) ──────────────────
   Widget _buildCouponAndPriceSection({
     required double orderAmount,
-    required double platformFee,
+    required double packingCharge,
+    required double discountAmount,
     required double total,
+    required AsyncValue<List<MenuItem>> couponsAsync,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,12 +557,35 @@ class _CartScreenState extends ConsumerState<CartScreen>
             const SizedBox(width: 8),
             GestureDetector(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Coupon applied!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                final enteredCode = _couponController.text.trim().toUpperCase();
+                final coupons = couponsAsync.value ?? [];
+                final matching = coupons.where((c) => c.name == enteredCode).firstOrNull;
+
+                if (matching != null) {
+                  setState(() {
+                    _discountAmount = matching.price;
+                    _appliedCouponCode = matching.name;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Coupon "$enteredCode" applied! Flat ₹${matching.price.toStringAsFixed(0)} discount.'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.green[700],
+                    ),
+                  );
+                } else {
+                  setState(() {
+                    _discountAmount = 0.0;
+                    _appliedCouponCode = null;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Invalid or expired coupon code.'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
               },
               child: Container(
                 height: 44,
@@ -571,6 +611,84 @@ class _CartScreenState extends ConsumerState<CartScreen>
           ],
         ),
 
+        // Available Coupons Horizontal List (Screenshot 5 detail)
+        couponsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => const SizedBox.shrink(),
+          data: (coupons) {
+            if (coupons.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                const Text(
+                  'Available Coupons:',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 38,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: coupons.length,
+                    itemBuilder: (context, index) {
+                      final coupon = coupons[index];
+                      final isApplied = _appliedCouponCode == coupon.name;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: FilterChip(
+                          selected: isApplied,
+                          label: Text(
+                            '${coupon.name} (Flat ₹${coupon.price.toStringAsFixed(0)} off)',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isApplied ? Colors.white : const Color(0xFFC62828),
+                            ),
+                          ),
+                          selectedColor: const Color(0xFFC62828),
+                          backgroundColor: const Color(0xFFFFEBEE),
+                          side: BorderSide(
+                            color: isApplied ? const Color(0xFFC62828) : const Color(0xFFFFCDD2),
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              _couponController.text = coupon.name;
+                              setState(() {
+                                _discountAmount = coupon.price;
+                                _appliedCouponCode = coupon.name;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Coupon "${coupon.name}" applied! Flat ₹${coupon.price.toStringAsFixed(0)} discount.'),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: Colors.green[700],
+                                ),
+                              );
+                            } else {
+                              _couponController.clear();
+                              setState(() {
+                                _discountAmount = 0.0;
+                                _appliedCouponCode = null;
+                              });
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+
         const SizedBox(height: 16),
 
         // Price rows
@@ -579,19 +697,34 @@ class _CartScreenState extends ConsumerState<CartScreen>
         Row(
           children: [
             const Text(
-              'Platform Fee',
+              'Packing Charge',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: _textSecondary),
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.info_outline, size: 14, color: Colors.grey.shade400),
             const Spacer(),
             Text(
-              '₹${platformFee.toStringAsFixed(2)}',
+              '₹${packingCharge.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: _textPrimary),
             ),
           ],
         ),
+        if (discountAmount > 0) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                'Discount ($_appliedCouponCode)',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.green, fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              Text(
+                '-₹${discountAmount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 10),
 
         // Total
@@ -740,7 +873,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
   }
 
   // ─── Sticky bottom bar ─────────────────────────────────────────────
-  Widget _buildBottomBar(bool isEmpty) {
+  Widget _buildBottomBar(bool isEmpty, double total) {
     return Container(
       padding: EdgeInsets.only(
         left: 16,
@@ -766,7 +899,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
         width: double.infinity,
         height: 52,
         child: ElevatedButton(
-          onPressed: (isEmpty || _isOrdering) ? null : _placeOrder,
+          onPressed: (isEmpty || _isOrdering) ? null : () => _placeOrder(total),
           style: ElevatedButton.styleFrom(
             backgroundColor: _yellow,
             foregroundColor: _textPrimary,
