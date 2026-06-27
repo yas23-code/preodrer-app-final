@@ -40,6 +40,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           data: (profile) {
+            debugPrint('DEBUG: Profile map keys in app: ${profile?.keys.toList()}');
             final email = profile?['email']?.toString() ?? user?.email ?? '—';
             final name = profile?['full_name']?.toString() ??
                 profile?['name']?.toString() ??
@@ -202,12 +203,7 @@ class ProfileScreen extends ConsumerWidget {
                           height: 46,
                           child: ElevatedButton(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Edit Profile feature coming soon!'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              context.push('/profile/edit');
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: accentRed,

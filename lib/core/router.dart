@@ -12,6 +12,7 @@ import '../features/orders/screens/order_detail_screen.dart';
 import '../features/orders/screens/orders_screen.dart';
 import '../features/payment/screens/payment_webview_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/profile/screens/edit_profile_screen.dart';
 import '../features/menu/screens/menu_screen.dart';
 import '../shared/widgets/customer_bottom_navbar.dart';
 
@@ -105,6 +106,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/payment',
         builder: (context, state) => const PaymentWebviewScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
 
