@@ -307,7 +307,8 @@ class _PopularItemCard extends ConsumerWidget {
                           shape: const CircleBorder(),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                               ref
+                            onTap: () {
+                              ref
                                   .read(cartControllerProvider.notifier)
                                   .addItem(item, context)
                                   .then((success) {

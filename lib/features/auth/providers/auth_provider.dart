@@ -92,7 +92,7 @@ class AuthController extends AsyncNotifier<User?> {
 
   // ─── Email / Password Sign Up ───────────────────────────────────
   /// [role] should be 'student' or 'vendor'.
-  Future<void> signUpWithEmail({
+  Future<User> signUpWithEmail({
     required String email,
     required String password,
     required String fullName,
@@ -117,14 +117,15 @@ class AuthController extends AsyncNotifier<User?> {
     try {
       await supabase.from(kProfilesTableName).upsert({
         'id': user.id,
-        'full_name': fullName,
+        'name': fullName,
         'email': email,
         'role': role,
       });
-    } catch (_) {
-      // Profile upsert is best-effort; the RLS policy or schema
-      // may handle this via a database trigger instead.
+    } catch (e) {
+      developer.log('Error upserting profile: $e', name: 'AuthController');
     }
+
+    return user;
   }
 
   // ─── Google Sign In ─────────────────────────────────────────────

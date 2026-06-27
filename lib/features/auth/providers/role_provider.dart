@@ -25,7 +25,7 @@ final roleProvider = FutureProvider<AppRole>((ref) async {
       final roleStr = response['role'] as String;
       if (roleStr == 'superadmin') {
         return AppRole.superadmin;
-      } else if (roleStr == 'vendor') {
+      } else if (roleStr == 'vendor' || roleStr == 'shop_owner') {
         return AppRole.vendor;
       }
     }
@@ -40,7 +40,7 @@ final roleProvider = FutureProvider<AppRole>((ref) async {
       final roleStr = profileResponse['role'] as String;
       if (roleStr == 'superadmin') {
         return AppRole.superadmin;
-      } else if (roleStr == 'vendor') {
+      } else if (roleStr == 'vendor' || roleStr == 'shop_owner') {
         return AppRole.vendor;
       }
     }
@@ -68,3 +68,28 @@ final myRegistrationProvider = FutureProvider.autoDispose<Map<String, dynamic>?>
     return null;
   }
 });
+
+/// Returns the vendor approval status for the current user.
+/// Possible values: 'approved', 'pending', 'rejected', or null (no registration found).
+/// Used by the router redirect and RoleGate to gate vendor dashboard access.
+final vendorStatusProvider = FutureProvider<String?>((ref) async {
+  final authState = ref.watch(authControllerProvider);
+  final user = authState.asData?.value;
+  if (user == null) return null;
+
+  final supabase = ref.read(supabaseClientProvider);
+  try {
+    final response = await supabase
+        .from('canteen_registrations')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+    if (response != null) {
+      return response['status'] as String?;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+});
+

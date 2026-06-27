@@ -20,10 +20,32 @@ class RoleGate extends ConsumerWidget {
           return const CanteenApprovalsScreen();
         }
         if (role == AppRole.vendor) {
-          return const VendorDashboardScreen();
+          // Check if the vendor is approved before showing dashboard
+          final vendorStatusAsync = ref.watch(vendorStatusProvider);
+          return vendorStatusAsync.when(
+            data: (status) {
+              if (status == 'approved') {
+                return const VendorDashboardScreen();
+              }
+              // Vendor exists but not approved — show pending/rejected status
+              final registrationAsync = ref.watch(myRegistrationProvider);
+              return registrationAsync.when(
+                data: (reg) {
+                  return ShopRegistrationStatusScreen(
+                    status: reg?['status'] as String? ?? 'pending',
+                    rejectionReason: reg?['rejection_reason'] as String?,
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const ShopRegistrationStatusScreen(status: 'pending'),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => const VendorDashboardScreen(), // Fallback to dashboard on error
+          );
         }
         
-        // If they are mapped to customer, check if they have a pending/rejected registration
+        // Customer role: check if they have a pending/rejected registration
         final registrationAsync = ref.watch(myRegistrationProvider);
         return registrationAsync.when(
           data: (reg) {
@@ -49,3 +71,4 @@ class RoleGate extends ConsumerWidget {
     );
   }
 }
+

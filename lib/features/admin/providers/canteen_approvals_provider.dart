@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/supabase_client.dart';
 
@@ -99,7 +100,7 @@ class CanteenApprovalsNotifier extends Notifier<CanteenApprovalsState> {
       await supabase.from('user_roles').upsert({
         'user_id': userId,
         'role': 'vendor',
-      });
+      }, onConflict: 'user_id');
 
       // 2. Also update profiles role column
       try {
@@ -124,7 +125,8 @@ class CanteenApprovalsNotifier extends Notifier<CanteenApprovalsState> {
       // Refresh list
       await fetchRegistrations();
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[APPROVE_CANTEEN_ERROR] Failed to approve canteen: $e\n$stack');
       return false;
     }
   }

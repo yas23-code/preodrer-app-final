@@ -14,11 +14,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "820783342425-5oocqemuofjt60s00ba60tsqdlm9p1fm.apps.googleusercontent.com",
+          "client_id": "820783342425-qhfooqfeda2l2t1u68tfve0aumh6sr9u.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.abhinav.preorder_app",
-            "certificate_hash": "1af5ee0386094069624dc014016e0767397ac2d3"
+            "certificate_hash": "c64ee9f5c6a59918cc7de8fcc08f847c36b033b2"
+          }
+        },
+        {
+          "client_id": "820783342425-re26dst65ahn3b36k1ulmr4oed3b63k1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abhinav.preorder_app",
+            "certificate_hash": "666a8f993b749b9192f4f86ed0e1865ba6747c1c"
           }
         },
         {

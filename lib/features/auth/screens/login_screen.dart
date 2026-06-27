@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/role_provider.dart';
 import '../../../core/supabase_client.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -23,7 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _signUpNameCtrl = TextEditingController();
   final _signUpEmailCtrl = TextEditingController();
   final _signUpPasswordCtrl = TextEditingController();
-  int _selectedRole = 0; // 0=Student, 1=Vendor
+
 
   // Shop Owner controllers
   final _shopNameCtrl = TextEditingController();
@@ -67,6 +68,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(authControllerProvider.notifier)
           .signInWithEmail(email: email, password: password);
+      // Force providers to re-fetch for the newly logged-in user
+      ref.invalidate(roleProvider);
+      ref.invalidate(vendorStatusProvider);
+      ref.invalidate(myRegistrationProvider);
     });
   }
 
@@ -82,13 +87,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _showError('Password must be at least 6 characters.');
       return;
     }
-    final role = _selectedRole == 0 ? 'student' : 'vendor';
     await _runAuth(() async {
       await ref.read(authControllerProvider.notifier).signUpWithEmail(
             email: email,
             password: password,
             fullName: name,
-            role: role,
+            role: 'student',
           );
     });
   }
@@ -110,19 +114,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     await _runAuth(() async {
-      await ref.read(authControllerProvider.notifier).signUpWithEmail(
+      // Register as 'vendor' role so roleProvider identifies them correctly.
+      // They remain gated by vendorStatus='pending' until admin approval.
+      final user = await ref.read(authControllerProvider.notifier).signUpWithEmail(
             email: email,
             password: password,
             fullName: name,
-            role: 'customer', // Sign up as customer initially; role_gate will handle pending status
+            role: 'vendor',
           );
 
-      final user = ref.read(authControllerProvider).asData?.value;
-      if (user == null) {
-        throw StateError('Sign-up failed to retrieve user session.');
-      }
-
+      // Also insert into user_roles so roleProvider picks up 'vendor'
       final supabase = ref.read(supabaseClientProvider);
+      try {
+        await supabase.from('user_roles').upsert({
+          'user_id': user.id,
+          'role': 'vendor',
+        });
+      } catch (_) {}
+
       await supabase.from('canteen_registrations').insert({
         'user_id': user.id,
         'owner_name': name,
@@ -132,12 +141,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         'location': location,
         'status': 'pending',
       });
+
+      // Force providers to re-fetch with the new registration data
+      ref.invalidate(vendorStatusProvider);
+      ref.invalidate(myRegistrationProvider);
+      ref.invalidate(roleProvider);
     });
   }
 
   Future<void> _handleGoogleSignIn() async {
     await _runAuth(() async {
       await ref.read(authControllerProvider.notifier).signInWithGoogle();
+      // Force providers to re-fetch for the newly logged-in user
+      ref.invalidate(roleProvider);
+      ref.invalidate(vendorStatusProvider);
+      ref.invalidate(myRegistrationProvider);
     });
   }
 
@@ -474,35 +492,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onToggle: () =>
               setState(() => _obscureSignUpPw = !_obscureSignUpPw),
         ),
-        const SizedBox(height: 20),
-        const _AuthLabel('I am a...'),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _RoleCard(
-                icon: Icons.school_rounded,
-                label: 'Student',
-                selected: _selectedRole == 0,
-                onTap: () => setState(() => _selectedRole = 0),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _RoleCard(
-                icon: Icons.storefront_rounded,
-                label: 'Vendor',
-                selected: _selectedRole == 1,
-                onTap: () => setState(() => _selectedRole = 1),
-              ),
-            ),
-          ],
-        ),
         const SizedBox(height: 24),
         _GradientActionButton(
           label: 'Create Account',
           isLoading: _isLoading,
           onTap: _handleSignUp,
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Want to sell food? ',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _selectedTab = 2),
+                child: const Text(
+                  'Register as Shop Owner',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFDA291C),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -886,57 +904,6 @@ class _GoogleButton extends StatelessWidget {
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _RoleCard({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFFFF8E1) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? const Color(0xFFFFC300) : Colors.grey[200]!,
-            width: selected ? 2 : 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 28,
-              color: selected ? const Color(0xFFDA291C) : Colors.grey[400],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? Colors.black : Colors.grey[600],
               ),
             ),
           ],
