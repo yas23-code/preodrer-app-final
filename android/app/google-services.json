@@ -13,6 +13,7 @@
         }
       },
       "oauth_client": [
+        {
           "client_id": "820783342425-5oocqemuofjt60s00ba60tsqdlm9p1fm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

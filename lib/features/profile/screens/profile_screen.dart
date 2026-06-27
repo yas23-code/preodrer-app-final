@@ -1,15 +1,65 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../providers/profile_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      if (pickedFile == null) return;
+
+      setState(() => _isUploading = true);
+
+      final file = File(pickedFile.path);
+      await ref.read(profileControllerProvider).uploadProfilePicture(file);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: $e'),
+            backgroundColor: const Color(0xFFE53935),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
     final user = ref.watch(authControllerProvider).maybeWhen(
           data: (u) => u,
@@ -48,9 +98,9 @@ class ProfileScreen extends ConsumerWidget {
                 'Guest User';
             final phone = profile?['phone']?.toString() ?? '—';
             final college = profile?['college']?.toString() ?? 'BITS Pilani';
-            final hostel = profile?['hostel']?.toString() ??
-                profile?['block']?.toString() ??
-                'Gandhi Bhawan';
+
+            final avatarUrl = profile?['avatar_url']?.toString() ??
+                user?.userMetadata?['avatar_url']?.toString();
 
             final initials = name.isNotEmpty
                 ? name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
@@ -100,27 +150,53 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 36,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                        child: ClipOval(
+                          child: _isUploading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    strokeWidth: 3,
+                                  ),
+                                )
+                              : (avatarUrl != null && avatarUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: avatarUrl,
+                                      width: 110,
+                                      height: 110,
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          strokeWidth: 3,
+                                        ),
+                                      ),
+                                      errorWidget: (context, url, error) => Center(
+                                        child: Text(
+                                          initials,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 36,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        initials,
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    )),
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Profile picture upload coming soon!'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
+                        onTap: _pickAndUploadImage,
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(
@@ -253,13 +329,6 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                         const Divider(height: 1, indent: 64, color: Color(0xFFF5F5F5)),
 
-                        // Hostel Info
-                        _buildProfileTile(
-                          icon: '🏢',
-                          title: 'Hostel / Block',
-                          value: hostel,
-                        ),
-                        const Divider(height: 1, indent: 64, color: Color(0xFFF5F5F5)),
 
                         // My Orders
                         _buildProfileTile(

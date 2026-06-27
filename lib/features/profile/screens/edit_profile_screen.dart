@@ -16,7 +16,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _collegeController;
-  late TextEditingController _hostelController;
   bool _isSaving = false;
 
   @override
@@ -30,12 +29,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         '';
     final phone = profile?['phone']?.toString() ?? '';
     final college = profile?['college']?.toString() ?? '';
-    final hostel = profile?['hostel']?.toString() ?? '';
 
     _nameController = TextEditingController(text: name);
     _phoneController = TextEditingController(text: phone);
     _collegeController = TextEditingController(text: college);
-    _hostelController = TextEditingController(text: hostel);
   }
 
   @override
@@ -43,7 +40,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _collegeController.dispose();
-    _hostelController.dispose();
     super.dispose();
   }
 
@@ -57,7 +53,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             fullName: _nameController.text.trim(),
             phone: _phoneController.text.trim(),
             college: _collegeController.text.trim(),
-            hostel: _hostelController.text.trim(),
           );
 
       if (mounted) {
@@ -224,20 +219,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Please enter your college name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      _buildLabel('Hostel / Block'),
-                      const SizedBox(height: 8),
-                      _buildTextField(
-                        controller: _hostelController,
-                        hint: 'Enter your hostel or block',
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your hostel/block';
                           }
                           return null;
                         },

@@ -100,7 +100,6 @@ class _LandingScreenState extends State<LandingScreen> {
                      _buildNavBar(context),
                      _buildHeroSection(context),
                      _buildCTASection(context),
-                     _buildFAQSection(),
                      _buildFooter(),
                    ],
                  ),
@@ -418,61 +417,6 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildFAQSection() {
-    return Container(
-       width: double.infinity,
-       color: const Color(0xFFFFF8E1), // mcd-cream
-       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 48),
-       child: Column(
-         children: [
-            const Text(
-              'Frequently Asked Questions',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-               'Got questions? We\'ve got answers.',
-               style: TextStyle(
-                 fontSize: 16,
-                 color: Colors.black54,
-               ),
-               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            _FAQCard(
-              question: 'How do I place an order?',
-              answer: 'Simply sign in, browse the available canteens, select your items, add them to cart, and complete your payment. You\'ll receive a unique pickup code once your order is confirmed.',
-            ),
-            const SizedBox(height: 12),
-            _FAQCard(
-              question: 'What payment methods are accepted?',
-              answer: 'We accept all major payment methods including UPI, credit/debit cards, and net banking through our secure payment gateway.',
-            ),
-            const SizedBox(height: 12),
-            _FAQCard(
-              question: 'How do I know when my order is ready?',
-              answer: 'You will receive a notification on your Gmail ID, and you will also receive an update directly inside the web app. You can check the real-time status of your order anytime by going to the Order History section in the app, where it will show whether your order is Pending, Preparing, or Ready for Pickup. Just show your pickup code at the counter!',
-            ),
-            const SizedBox(height: 12),
-            _FAQCard(
-              question: 'Can I cancel or modify my order?',
-              answer: 'Once an order is placed and payment is confirmed, it cannot be cancelled or modified. Please review your order carefully before completing the payment.',
-            ),
-            const SizedBox(height: 12),
-            _FAQCard(
-              question: 'What if I face any issues with my order?',
-              answer: 'For any issues or concerns, please contact our customer support through WhatsApp. We\'re here to help you with any problems you may encounter.',
-            ),
-         ],
-       ),
-    );
-  }
-  
   Widget _buildFooter() {
     return Container(
       width: double.infinity,
@@ -519,89 +463,6 @@ class _LandingScreenState extends State<LandingScreen> {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FAQCard extends StatefulWidget {
-  final String question;
-  final String answer;
-
-  const _FAQCard({
-    required this.question,
-    required this.answer,
-  });
-
-  @override
-  State<_FAQCard> createState() => _FAQCardState();
-}
-
-class _FAQCardState extends State<_FAQCard> {
-  bool _expanded = false;
-
-  void _toggle() {
-    setState(() {
-      _expanded = !_expanded;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _toggle,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFFFFC300).withValues(alpha: 0.4), // mcd-yellow border
-            width: 2,
-          ),
-          boxShadow: const [
-             BoxShadow(
-               color: Colors.black12,
-               blurRadius: 4,
-               offset: Offset(0, 2),
-             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.question,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                Icon(
-                  _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: const Color(0xFFDA291C), // mcd-red
-                ),
-              ],
-            ),
-            if (_expanded) ...[
-              const SizedBox(height: 12),
-              Text(
-                widget.answer,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }

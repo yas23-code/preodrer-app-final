@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/cart_controller.dart';
 import '../../canteen/providers/canteen_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -30,6 +31,8 @@ class _CartScreenState extends ConsumerState<CartScreen>
   static const _textPrimary = Color(0xFF222222);
   static const _textSecondary = Color(0xFF666666);
 
+  bool _phoneAutoFilled = false;
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +44,21 @@ class _CartScreenState extends ConsumerState<CartScreen>
       parent: _successAnimController,
       curve: Curves.elasticOut,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_phoneAutoFilled) {
+      final profileAsync = ref.read(currentUserProfileProvider);
+      profileAsync.whenData((profile) {
+        final phone = profile?['phone'] as String? ?? '';
+        if (phone.isNotEmpty) {
+          _phoneController.text = phone;
+          _phoneAutoFilled = true;
+        }
+      });
+    }
   }
 
   @override

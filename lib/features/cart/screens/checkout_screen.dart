@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../shared/utils/formatters.dart';
 import '../providers/cart_controller.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -20,6 +21,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   bool _phoneTouched = false;
+  bool _phoneAutoFilled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_phoneAutoFilled) {
+      final profileAsync = ref.read(currentUserProfileProvider);
+      profileAsync.whenData((profile) {
+        final phone = profile?['phone'] as String? ?? '';
+        if (phone.isNotEmpty) {
+          _phoneController.text = phone;
+          _phoneAutoFilled = true;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {

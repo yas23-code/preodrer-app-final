@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
+import '../../../core/storage_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 final profileProvider = Provider<AsyncValue<Map<String, dynamic>?>>(
@@ -16,7 +18,6 @@ class ProfileController {
     required String fullName,
     required String phone,
     required String college,
-    required String hostel,
   }) async {
     final supabase = _ref.read(supabaseClientProvider);
     final user = supabase.auth.currentUser;
@@ -26,10 +27,28 @@ class ProfileController {
       'name': fullName,
       'phone': phone,
       'college': college,
-      'hostel': hostel,
     }).eq('id', user.id);
 
     // Invalidate the profile provider so the UI updates
+    _ref.invalidate(currentUserProfileProvider);
+  }
+
+  Future<void> uploadProfilePicture(File file) async {
+    final supabase = _ref.read(supabaseClientProvider);
+    final user = supabase.auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found');
+
+    final storage = _ref.read(storageServiceProvider);
+
+    // 1. Upload to Supabase storage in 'avatars' folder
+    final publicUrl = await storage.uploadImage(file, folder: 'avatars');
+
+    // 2. Update the profile with new avatar_url
+    await supabase.from(kProfilesTableName).update({
+      'avatar_url': publicUrl,
+    }).eq('id', user.id);
+
+    // 3. Invalidate to reload the screen
     _ref.invalidate(currentUserProfileProvider);
   }
 }
