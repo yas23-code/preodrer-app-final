@@ -13,42 +13,52 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   late VideoPlayerController _bgController;
   late VideoPlayerController _heroController;
-  bool _isVideoInitialized = false;
+  bool _isBgVideoInitialized = false;
+  bool _isHeroVideoInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initVideos();
+    _initBgVideo();
+    _initHeroVideo();
   }
 
-  Future<void> _initVideos() async {
-    _bgController = VideoPlayerController.asset('assets/videos/background-video.mp4');
-    _heroController = VideoPlayerController.asset('assets/videos/hero-video.mp4');
+  Future<void> _initBgVideo() async {
+    try {
+      _bgController = VideoPlayerController.asset('assets/videos/canteen-background.mp4');
+      await _bgController.initialize();
+      _bgController.setVolume(0);
+      _bgController.setLooping(true);
+      _bgController.play();
+      debugPrint('BG video initialized: ${_bgController.value.size}');
+      if (mounted) {
+        setState(() => _isBgVideoInitialized = true);
+      }
+    } catch (e) {
+      debugPrint('BG video init error: $e');
+    }
+  }
 
-    await Future.wait([
-      _bgController.initialize(),
-      _heroController.initialize(),
-    ]);
-
-    _bgController.setVolume(0);
-    _bgController.setLooping(true);
-    _bgController.play();
-
-    _heroController.setVolume(0);
-    _heroController.setLooping(true);
-    _heroController.play();
-
-    if (mounted) {
-      setState(() {
-        _isVideoInitialized = true;
-      });
+  Future<void> _initHeroVideo() async {
+    try {
+      _heroController = VideoPlayerController.asset('assets/videos/hero-video.mp4');
+      await _heroController.initialize();
+      _heroController.setVolume(0);
+      _heroController.setLooping(true);
+      _heroController.play();
+      debugPrint('Hero video initialized: ${_heroController.value.size}');
+      if (mounted) {
+        setState(() => _isHeroVideoInitialized = true);
+      }
+    } catch (e) {
+      debugPrint('Hero video init error: $e');
     }
   }
 
   @override
   void dispose() {
-    _bgController.dispose();
-    _heroController.dispose();
+    if (_isBgVideoInitialized) _bgController.dispose();
+    if (_isHeroVideoInitialized) _heroController.dispose();
     super.dispose();
   }
 
@@ -66,7 +76,7 @@ class _LandingScreenState extends State<LandingScreen> {
       body: Stack(
         children: [
           // Background Video
-          if (_isVideoInitialized)
+          if (_isBgVideoInitialized)
             Positioned.fill(
               child: FittedBox(
                 fit: BoxFit.cover,
@@ -78,12 +88,7 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
             ),
           
-          // Light overlay for slight contrast
-          Positioned.fill(
-            child: Container(
-              color: Colors.black.withOpacity(0.15),
-            ),
-          ),
+          // Removed overlay — video plays at full original brightness
 
           // Content
           Positioned.fill(
@@ -120,7 +125,12 @@ class _LandingScreenState extends State<LandingScreen> {
                shape: BoxShape.circle,
                color: Colors.white,
              ),
-             child: const Icon(Icons.fastfood_rounded, color: Color(0xFFDA291C), size: 20), // mcd-red
+             child: ClipOval(
+               child: Image.asset(
+                 'assets/images/logo.png',
+                 fit: BoxFit.cover,
+               ),
+             ),
           ),
           const SizedBox(width: 8),
           RichText(
@@ -175,15 +185,16 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget _buildHeroSection(BuildContext context) {
     return Container(
        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+       color: Colors.transparent,
        child: Column(
          crossAxisAlignment: CrossAxisAlignment.center,
          children: [
            Container(
              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
              decoration: BoxDecoration(
-               color: Colors.white.withOpacity(0.95),
+               color: Colors.white.withValues(alpha: 0.95),
                borderRadius: BorderRadius.circular(30),
-               border: Border.all(color: Colors.white.withOpacity(0.2)),
+               border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
              ),
              child: Row(
                mainAxisSize: MainAxisSize.min,
@@ -203,15 +214,15 @@ class _LandingScreenState extends State<LandingScreen> {
            ),
            const SizedBox(height: 24),
            const Text(
-             'Skip the Queue,',
-             style: TextStyle(
-               fontSize: 40,
-               fontWeight: FontWeight.w900,
-               color: Colors.black,
-               height: 1.1,
+               'Skip the Queue,',
+               style: TextStyle(
+                 fontSize: 40,
+                 fontWeight: FontWeight.w900,
+                 color: Colors.black,
+                 height: 1.1,
+               ),
+               textAlign: TextAlign.center,
              ),
-             textAlign: TextAlign.center,
-           ),
            const Text(
              'Grab Your Food',
              style: TextStyle(
@@ -228,7 +239,7 @@ class _LandingScreenState extends State<LandingScreen> {
            const SizedBox(height: 32),
            
            // Hero Video
-           if (_isVideoInitialized)
+           if (_isHeroVideoInitialized)
              Container(
                width: double.infinity,
                constraints: const BoxConstraints(maxWidth: 500),
@@ -237,10 +248,10 @@ class _LandingScreenState extends State<LandingScreen> {
                  child: Container(
                    decoration: BoxDecoration(
                      borderRadius: BorderRadius.circular(16),
-                     border: Border.all(color: Colors.white.withOpacity(0.4), width: 4),
+                     border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 4),
                      boxShadow: [
                        BoxShadow(
-                         color: Colors.black.withOpacity(0.3),
+                         color: Colors.black.withValues(alpha: 0.3),
                          blurRadius: 20,
                          offset: const Offset(0, 10),
                        )
@@ -256,50 +267,57 @@ class _LandingScreenState extends State<LandingScreen> {
 
            const SizedBox(height: 32),
            const Text(
-             'Order from your favorite campus canteens, pay ahead, and pick up when ready.',
-             style: TextStyle(
-               fontSize: 18,
-               fontWeight: FontWeight.w800,
-               color: Colors.black,
-               height: 1.3,
-             ),
-             textAlign: TextAlign.center,
-           ),
-           const SizedBox(height: 32),
-           GestureDetector(
-              onTap: () => context.go('/login'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFDA291C), Color(0xFFFFC300)],
-                  ),
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                       color: const Color(0xFFDA291C).withOpacity(0.3),
-                       blurRadius: 15,
-                       offset: const Offset(0, 5),
-                    )
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text(
-                      'Get Started',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-                  ],
-                ),
+              'Order from your favorite campus canteens, pay ahead, and pick up when ready.',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+                height: 1.3,
               ),
-           ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 260),
+              child: GestureDetector(
+                 onTap: () => context.go('/login'),
+                 child: Container(
+                   padding: const EdgeInsets.symmetric(vertical: 14),
+                   decoration: BoxDecoration(
+                     gradient: const LinearGradient(
+                       begin: Alignment.centerLeft,
+                       end: Alignment.centerRight,
+                       colors: [Color(0xFFFFB300), Color(0xFFDA291C)],
+                     ),
+                     borderRadius: BorderRadius.circular(16),
+                     boxShadow: [
+                       BoxShadow(
+                          color: const Color(0xFFDA291C).withValues(alpha: 0.25),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                       )
+                     ],
+                   ),
+                   child: Row(
+                     mainAxisAlignment: MainAxisAlignment.center,
+                     children: const [
+                       Text(
+                         'Get Started',
+                         style: TextStyle(
+                           fontSize: 18,
+                           fontWeight: FontWeight.w600,
+                           color: Colors.white,
+                           letterSpacing: 0.5,
+                         ),
+                       ),
+                       SizedBox(width: 8),
+                       Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                     ],
+                   ),
+                 ),
+              ),
+            ),
          ],
        ),
     );
@@ -308,7 +326,7 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget _buildCTASection(BuildContext context) {
     return Container(
        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-       color: Colors.black.withOpacity(0.3), // Darker translucent backdrop
+       color: Colors.black.withValues(alpha: 0.3), // Darker translucent backdrop
        child: Column(
          mainAxisAlignment: MainAxisAlignment.center,
          children: [
@@ -484,7 +502,7 @@ class _LandingScreenState extends State<LandingScreen> {
             'Skip the queue, grab your food.\nThe easiest way to order from\nyour campus canteens.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -496,7 +514,7 @@ class _LandingScreenState extends State<LandingScreen> {
             '© ${DateTime.now().year} preorder.food — All rights reserved.',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.35),
+              color: Colors.white.withValues(alpha: 0.35),
             ),
             textAlign: TextAlign.center,
           ),
@@ -539,7 +557,7 @@ class _FAQCardState extends State<_FAQCard> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xFFFFC300).withOpacity(0.4), // mcd-yellow border
+            color: const Color(0xFFFFC300).withValues(alpha: 0.4), // mcd-yellow border
             width: 2,
           ),
           boxShadow: const [

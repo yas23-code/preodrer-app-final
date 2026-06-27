@@ -182,14 +182,19 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed: () {
-                      for (int i = 0; i < _quantity; i++) {
-                        ref.read(cartControllerProvider.notifier).addItem(item);
+                    onPressed: () async {
+                      final success = await ref.read(cartControllerProvider.notifier).addItem(item, context);
+                      if (!success) return;
+                      // Add remaining quantity (canteen matches or was replaced already)
+                      for (int i = 1; i < _quantity; i++) {
+                        await ref.read(cartControllerProvider.notifier).addItem(item);
                       }
-                      ScaffoldMessenger.of(context)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(SnackBar(content: Text('${item.name} x$_quantity added to cart')));
-                      context.pop();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(SnackBar(content: Text('${item.name} x$_quantity added to cart')));
+                        context.pop();
+                      }
                     },
                     icon: const Icon(Icons.add_shopping_cart),
                     label: const Text('Add to Cart'),

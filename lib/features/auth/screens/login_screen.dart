@@ -303,7 +303,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     shape: BoxShape.circle,
                     color: Colors.white,
                   ),
-                  child: const Icon(Icons.fastfood_rounded, color: Color(0xFFDA291C), size: 18), // mcd-red
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 RichText(

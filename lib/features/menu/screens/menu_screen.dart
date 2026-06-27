@@ -748,7 +748,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                                                           ref
                                                               .read(cartControllerProvider
                                                                   .notifier)
-                                                              .addItem(item);
+                                                              .addItem(item, context);
                                                         },
                                                         behavior:
                                                             HitTestBehavior
@@ -771,7 +771,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                                                       ref
                                                           .read(cartControllerProvider
                                                               .notifier)
-                                                          .addItem(item);
+                                                          .addItem(item, context);
                                                     },
                                                     behavior: HitTestBehavior
                                                         .opaque,

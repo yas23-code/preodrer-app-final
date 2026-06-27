@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../canteen/providers/canteen_provider.dart';
 import '../../menu/models/menu_item.dart';
 import '../models/cart_model.dart';
 import '../repositories/cart_repository.dart';
@@ -35,21 +36,146 @@ class CartController extends AsyncNotifier<CartState> {
 
   String? get _userId => ref.read(authControllerProvider).asData?.value?.id;
 
-  Future<void> addItem(MenuItem item) async {
+  Future<String> _getCanteenName(String canteenId) async {
+    final cached = ref.read(canteensProvider).value;
+    if (cached != null) {
+      for (final c in cached) {
+        if (c.id == canteenId) return c.name;
+      }
+    }
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+      final res = await supabase.from(kCanteensTableName).select('name').eq('id', canteenId).maybeSingle();
+      if (res != null && res['name'] != null) {
+        return res['name'].toString();
+      }
+    } catch (_) {}
+    return 'Other Canteen';
+  }
+
+  Future<bool> addItem(MenuItem item, [BuildContext? context]) async {
     debugPrint('[UI_WIRING] cart_controller.dart addItem() called for item=${item.name}');
     final userId = _userId;
     if (userId == null) {
       debugPrint('[UI_WIRING] cart_controller.dart addItem() failed: No user found!');
-      return;
+      return false;
     }
 
     final current = state.asData?.value ?? const CartState.empty();
-    debugPrint('[UI_WIRING] cart_controller.dart current state lines count: ${current.lines.length}');
-    final existing = current.lines[item.id];
+    
+    // Check if item is from a different canteen
+    final activeCanteenId = current.lines.isNotEmpty 
+        ? current.lines.values.first.item.canteenId 
+        : null;
+
+    if (activeCanteenId != null && item.canteenId != null && activeCanteenId != item.canteenId) {
+      if (context == null) {
+        debugPrint('[CartController] Different canteen, but context is null. Rejecting add.');
+        return false;
+      }
+
+      final currentCanteenName = await _getCanteenName(activeCanteenId);
+      final newCanteenName = await _getCanteenName(item.canteenId!);
+
+      if (!context.mounted) return false;
+
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: const Color(0xFFFFF9EC), // Warm cream background
+            title: const Text(
+              'Replace Cart?',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF222222),
+              ),
+            ),
+            content: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  color: Color(0xFF666666),
+                  height: 1.5,
+                ),
+                children: [
+                  const TextSpan(text: 'Your cart already contains items from '),
+                  TextSpan(
+                    text: currentCanteenName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF222222),
+                    ),
+                  ),
+                  const TextSpan(text: '.\n\nWould you like to clear your current cart and start a new order from '),
+                  TextSpan(
+                    text: newCanteenName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF222222),
+                    ),
+                  ),
+                  const TextSpan(text: '?'),
+                ],
+              ),
+            ),
+            actionsPadding: const EdgeInsets.only(bottom: 16, right: 16, left: 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF666666),
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE53935), // Accent Red
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                child: const Text(
+                  'Replace Cart',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (replace != true) {
+        return false;
+      }
+
+      // Clear the current cart items first
+      await clear();
+    }
+
+    // Refresh current reference since it could have been cleared
+    final currentUpdated = state.asData?.value ?? const CartState.empty();
+    final existing = currentUpdated.lines[item.id];
     final newQty = (existing?.quantity ?? 0) + 1;
 
     // Optimistic UI update
-    final nextLines = Map<String, CartLine>.from(current.lines);
+    final nextLines = Map<String, CartLine>.from(currentUpdated.lines);
     nextLines[item.id] = CartLine(item: item, quantity: newQty);
     state = AsyncValue.data(CartState(lines: nextLines));
     debugPrint('[CartController] addItem -> optimistic state updated (qty=$newQty)');
@@ -60,9 +186,11 @@ class CartController extends AsyncNotifier<CartState> {
             itemId: item.id,
             quantity: newQty,
           );
+      return true;
     } catch (e) {
       debugPrint('[CartController] addItem -> DB failure, ROLLING BACK UI: $e');
-      state = AsyncValue.data(current);
+      state = AsyncValue.data(currentUpdated);
+      return false;
     }
   }
 
@@ -119,7 +247,23 @@ class CartController extends AsyncNotifier<CartState> {
   Future<void> placeOrder() async {
     final userId = _userId;
     if (userId == null) return;
-    
+
+    // ── Phone number validation (fresh DB query) ──────────────────────
+    final supabaseForCheck = ref.read(supabaseClientProvider);
+    final profileRow = await supabaseForCheck
+        .from(kProfilesTableName)
+        .select('phone')
+        .eq('id', userId)
+        .maybeSingle();
+    final phone = profileRow?['phone']?.toString().trim();
+    debugPrint('[CartController] placeOrder -> phone check: "$phone"');
+    if (phone == null || phone.isEmpty) {
+      throw Exception(
+        'Phone number is required.\n'
+        'Go to Profile → Edit Profile and add your phone number before ordering.',
+      );
+    }
+
     final currentCart = state.asData?.value;
     if (currentCart == null || currentCart.lines.isEmpty) return;
 

@@ -307,22 +307,22 @@ class _PopularItemCard extends ConsumerWidget {
                           shape: const CircleBorder(),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
-                            onTap: () {
-                              ref
+                               ref
                                   .read(cartControllerProvider.notifier)
-                                  .addItem(item);
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context)
-                                    .hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('${item.name} added to cart'),
-                                    duration: const Duration(seconds: 2),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              }
+                                  .addItem(item, context)
+                                  .then((success) {
+                                if (success && context.mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('${item.name} added to cart'),
+                                      duration: const Duration(seconds: 2),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              });
                             },
                             child: const Icon(
                               Icons.add_rounded,
