@@ -23,7 +23,7 @@ class ProfileController {
     if (user == null) throw Exception('No authenticated user found');
 
     await supabase.from(kProfilesTableName).update({
-      'full_name': fullName,
+      'name': fullName,
       'phone': phone,
       'college': college,
       'hostel': hostel,
