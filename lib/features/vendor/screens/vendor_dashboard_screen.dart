@@ -20,7 +20,7 @@ final vendorCanteenProvider = FutureProvider.autoDispose<Map<String, dynamic>?>(
   
   final res = await supabase
       .from('canteens')
-      .select('id, name, location, is_open')
+      .select('id, name, location, is_open, banned')
       .eq('vendor_id', userId)
       .maybeSingle();
       
@@ -203,13 +203,73 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth > 800) {
-          return _buildDesktopLayout();
-        } else {
-          return _buildMobileShell();
+    final canteenAsync = ref.watch(vendorCanteenProvider);
+    
+    return canteenAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, stack) => Scaffold(body: Center(child: Text('Error loading canteen: $err'))),
+      data: (canteen) {
+        if (canteen != null && canteen['banned'] == true) {
+          return Scaffold(
+            body: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              color: const Color(0xFF121212),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.block_flipped,
+                    color: Color(0xFFDA291C),
+                    size: 80,
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Canteen Banned / Deleted',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Your canteen ID has been banned or deleted by the Super Admin.\nYou no longer have access to the vendor dashboard or incoming orders.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.6),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _handleSignOut,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDA291C),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth > 800) {
+              return _buildDesktopLayout();
+            } else {
+              return _buildMobileShell();
+            }
+          },
+        );
       },
     );
   }

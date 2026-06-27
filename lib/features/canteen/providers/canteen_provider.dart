@@ -11,7 +11,10 @@ final canteensProvider = StreamProvider.autoDispose<List<Canteen>>((ref) {
   return supabase
       .from(kCanteensTableName)
       .stream(primaryKey: ['id'])
-      .map((data) => data.map((row) => Canteen.fromJson(row)).toList());
+      .map((data) => data
+          .where((row) => row['banned'] != true)
+          .map((row) => Canteen.fromJson(row))
+          .toList());
 });
 
 final currentCanteenProvider = Provider.autoDispose<Canteen?>((ref) {
