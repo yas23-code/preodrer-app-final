@@ -244,7 +244,7 @@ class CartController extends AsyncNotifier<CartState> {
     }
   }
 
-  Future<void> placeOrder() async {
+  Future<void> placeOrder({double? customTotal}) async {
     final userId = _userId;
     if (userId == null) return;
 
@@ -287,12 +287,19 @@ class CartController extends AsyncNotifier<CartState> {
     try {
       final supabase = ref.read(supabaseClientProvider);
 
+      final orderAmount = currentCart.totalAmount;
+      final packingCharge = currentCart.lines.values.fold(
+        0.0,
+        (sum, line) => sum + ((line.item.packingCharge) * line.quantity),
+      );
+      final totalWithCharges = orderAmount + packingCharge;
+
       // 1. Insert order — always Acktron canteen
       final orderPayload = {
         'student_id': userId,
         'canteen_id': orderCanteenId,
         'status': 'pending',
-        'total_amount': currentCart.totalAmount,
+        'total_amount': customTotal ?? totalWithCharges,
       };
       debugPrint('[CANTEEN_DEBUG] placeOrder -> INSERT payload: $orderPayload');
 
