@@ -228,7 +228,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Vendor with a non-approved registration → force to pending page
-      if (role == AppRole.vendor && vendorStatus != 'approved') {
+      if (role == AppRole.vendor && vendorStatus != 'approved' && vendorStatus != null) {
         debugPrint('[ROUTER_REDIRECT] Vendor not approved, redirecting to /vendor-pending');
         return isVendorPending ? null : '/vendor-pending';
       }

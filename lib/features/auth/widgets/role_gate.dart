@@ -20,11 +20,10 @@ class RoleGate extends ConsumerWidget {
           return const CanteenApprovalsScreen();
         }
         if (role == AppRole.vendor) {
-          // Check if the vendor is approved before showing dashboard
           final vendorStatusAsync = ref.watch(vendorStatusProvider);
           return vendorStatusAsync.when(
             data: (status) {
-              if (status == 'approved') {
+              if (status == 'approved' || status == null) {
                 return const VendorDashboardScreen();
               }
               // Vendor exists but not approved — show pending/rejected status
