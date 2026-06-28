@@ -1,173 +1,335 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class VendorAnalyticsTab extends StatelessWidget {
+import '../providers/vendor_menu_provider.dart';
+
+class VendorAnalyticsTab extends ConsumerWidget {
   const VendorAnalyticsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Analytics Header ──────────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Analytics Dashboard',
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Real-time business insights',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {},
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+    final canteenAsync = ref.watch(vendorCanteenProvider);
+    final canteenId = canteenAsync.value?['id'] as String? ?? '';
+    final analyticsAsync = ref.watch(vendorAnalyticsProvider(canteenId));
 
-          // ── High Level Stats row ──────────────────────────────────────────
-          Row(
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF8E7), // Premium cream background
+      body: RefreshIndicator(
+        color: const Color(0xFFFFC300),
+        onRefresh: () async {
+          ref.invalidate(vendorAnalyticsProvider(canteenId));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _buildMetricRingCard(
-                  context: context,
-                  title: 'Order Completion',
-                  value: '94.2%',
-                  subtitle: '245 completed',
-                  percentage: 0.942,
-                  activeColor: Colors.green[700]!,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildMetricRingCard(
-                  context: context,
-                  title: 'On-time Prep',
-                  value: '88.5%',
-                  subtitle: 'Avg: 11 mins',
-                  percentage: 0.885,
-                  activeColor: colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ── Revenue Card ──────────────────────────────────────────────────
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // ── Analytics Header ──────────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Weekly Revenue', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text('₹24,530.00 total this week', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.green[700]!.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                      const Text(
+                        'Analytics Dashboard',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2B1D0E),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.trending_up, color: Colors.green[700], size: 16),
-                            const SizedBox(width: 4),
-                            Text('+14.2%', style: theme.textTheme.labelSmall?.copyWith(color: Colors.green[700], fontWeight: FontWeight.bold)),
-                          ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Real-time business insights',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF8D7F70),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  // Custom bar chart
-                  SizedBox(
-                    height: 160,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _buildBar(context: context, day: 'Mon', heightFraction: 0.45, amount: '₹3,200'),
-                        _buildBar(context: context, day: 'Tue', heightFraction: 0.60, amount: '₹4,100'),
-                        _buildBar(context: context, day: 'Wed', heightFraction: 0.35, amount: '₹2,900'),
-                        _buildBar(context: context, day: 'Thu', heightFraction: 0.85, amount: '₹5,600', isHighest: true),
-                        _buildBar(context: context, day: 'Fri', heightFraction: 0.70, amount: '₹4,900'),
-                        _buildBar(context: context, day: 'Sat', heightFraction: 0.50, amount: '₹3,850'),
-                        _buildBar(context: context, day: 'Sun', heightFraction: 0.20, amount: '₹1,500'),
-                      ],
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Color(0xFF2B1D0E)),
+                    onPressed: () {
+                      ref.invalidate(vendorAnalyticsProvider(canteenId));
+                    },
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-          // ── Peak Hours Card ───────────────────────────────────────────────
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Peak Hours Distribution', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Busy order periods during the day', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 24),
-                  // Hour bands
-                  _buildHourBand(context: context, time: '8 AM - 11 AM (Breakfast)', count: 48, percentage: 0.45),
-                  _buildHourBand(context: context, time: '12 PM - 3 PM (Lunch)', count: 98, percentage: 0.90, isPeak: true),
-                  _buildHourBand(context: context, time: '4 PM - 7 PM (Snacks)', count: 64, percentage: 0.60),
-                  _buildHourBand(context: context, time: '8 PM - 10 PM (Dinner)', count: 20, percentage: 0.20),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              analyticsAsync.when(
+                loading: () => const SizedBox(
+                  height: 200,
+                  child: Center(child: CircularProgressIndicator(color: Color(0xFFFFC300))),
+                ),
+                error: (e, _) => SizedBox(
+                  height: 200,
+                  child: Center(child: Text('Failed to load analytics: $e', style: const TextStyle(fontWeight: FontWeight.bold))),
+                ),
+                data: (data) {
+                  if (data.isEmpty) {
+                    return const SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: Text(
+                          'No order data available yet to display insights.',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8D7F70)),
+                        ),
+                      ),
+                    );
+                  }
 
-          // ── Popular Items Card ────────────────────────────────────────────
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Popular Items', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Top dishes sold this week', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 24),
-                  _buildPopularItemRow(context: context, itemName: 'Paneer Roll', count: 145, revenue: '₹16,675', percentage: 1.0),
-                  _buildPopularItemRow(context: context, itemName: 'Samosa', count: 120, revenue: '₹2,400', percentage: 0.82),
-                  _buildPopularItemRow(context: context, itemName: 'Cold Coffee', count: 85, revenue: '₹6,800', percentage: 0.58),
-                  _buildPopularItemRow(context: context, itemName: 'Cheese Burger', count: 50, revenue: '₹4,950', percentage: 0.34),
-                ],
+                  final completionRate = data['completionRate'] as double;
+                  final totalOrders = data['totalOrders'] as int;
+                  final completedCount = data['completedCount'] as int;
+                  final weeklyRevenue = data['weeklyRevenue'] as double;
+                  final dailyRevenue = data['dailyRevenue'] as List<dynamic>;
+                  final peakHours = data['peakHours'] as Map<String, dynamic>;
+                  final popularItems = data['popularItems'] as List<dynamic>;
+
+                  // Find max daily amount for chart scaling
+                  final double maxDailyAmount = dailyRevenue.fold<double>(
+                    1.0,
+                    (max, item) => (item['amount'] as double) > max ? (item['amount'] as double) : max,
+                  );
+
+                  // Find max peak hour count for scale
+                  final List<int> hourCountsList = [
+                    peakHours['breakfast'] as int,
+                    peakHours['lunch'] as int,
+                    peakHours['snacks'] as int,
+                    peakHours['dinner'] as int,
+                  ];
+                  final int maxHourCount = hourCountsList.fold<int>(1, (max, val) => val > max ? val : max);
+
+                  // Find max popular item sold count for scale
+                  final int maxPopularCount = popularItems.fold<int>(
+                    1,
+                    (max, item) => (item['count'] as int) > max ? (item['count'] as int) : max,
+                  );
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── High Level Stats row ──────────────────────────────────────────
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricRingCard(
+                              context: context,
+                              title: 'Order Completion',
+                              value: '${completionRate.toStringAsFixed(1)}%',
+                              subtitle: '$completedCount completed',
+                              percentage: completionRate / 100,
+                              activeColor: Colors.green[700]!,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricRingCard(
+                              context: context,
+                              title: 'Total Orders Received',
+                              value: '$totalOrders',
+                              subtitle: 'All lifetime orders',
+                              percentage: totalOrders > 0 ? 1.0 : 0.0,
+                              activeColor: const Color(0xFFFFC300),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Revenue Card ──────────────────────────────────────────────────
+                      Card(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: Color(0xFFECE6DA)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Weekly Revenue',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2B1D0E)),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '₹${weeklyRevenue.toStringAsFixed(2)} total this week',
+                                        style: const TextStyle(color: Color(0xFF8D7F70), fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[700]!.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.trending_up, color: Colors.green[700], size: 16),
+                                        const SizedBox(width: 4),
+                                        const Text(
+                                          'Active',
+                                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              // Dynamic weekly bar chart
+                              SizedBox(
+                                height: 160,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: dailyRevenue.map((item) {
+                                    final dayName = item['day'] as String;
+                                    final amount = item['amount'] as double;
+                                    final fraction = amount / maxDailyAmount;
+                                    return _buildBar(
+                                      context: context,
+                                      day: dayName,
+                                      heightFraction: fraction < 0.05 ? 0.05 : fraction,
+                                      amount: '₹${amount.toStringAsFixed(0)}',
+                                      isHighest: amount == maxDailyAmount && amount > 0,
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Peak Hours Card ───────────────────────────────────────────────
+                      Card(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: Color(0xFFECE6DA)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Peak Hours Distribution',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2B1D0E)),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Busy order periods based on time of placement',
+                                style: TextStyle(color: Color(0xFF8D7F70), fontSize: 13),
+                              ),
+                              const SizedBox(height: 24),
+                              _buildHourBand(
+                                context: context,
+                                time: 'Breakfast (8 AM - 11 AM)',
+                                count: peakHours['breakfast'] as int,
+                                percentage: (peakHours['breakfast'] as int) / maxHourCount,
+                              ),
+                              _buildHourBand(
+                                context: context,
+                                time: 'Lunch (12 PM - 3 PM)',
+                                count: peakHours['lunch'] as int,
+                                percentage: (peakHours['lunch'] as int) / maxHourCount,
+                                isPeak: (peakHours['lunch'] as int) == maxHourCount && maxHourCount > 0,
+                              ),
+                              _buildHourBand(
+                                context: context,
+                                time: 'Snacks (4 PM - 7 PM)',
+                                count: peakHours['snacks'] as int,
+                                percentage: (peakHours['snacks'] as int) / maxHourCount,
+                              ),
+                              _buildHourBand(
+                                context: context,
+                                time: 'Dinner (8 PM - 10 PM)',
+                                count: peakHours['dinner'] as int,
+                                percentage: (peakHours['dinner'] as int) / maxHourCount,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Popular Items Card ────────────────────────────────────────────
+                      Card(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: Color(0xFFECE6DA)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Top Selling Items',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2B1D0E)),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Top dishes sold this week',
+                                style: TextStyle(color: Color(0xFF8D7F70), fontSize: 13),
+                              ),
+                              const SizedBox(height: 24),
+                              if (popularItems.isEmpty)
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 20),
+                                    child: Text(
+                                      'No item order breakdown available.',
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8D7F70)),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ...popularItems.map((item) {
+                                  final name = item['itemName'] as String;
+                                  final count = item['count'] as int;
+                                  final rev = item['revenue'] as String;
+                                  final fraction = count / maxPopularCount;
+                                  return _buildPopularItemRow(
+                                    context: context,
+                                    itemName: name,
+                                    count: count,
+                                    revenue: rev,
+                                    percentage: fraction < 0.05 ? 0.05 : fraction,
+                                  );
+                                }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ),
+              const SizedBox(height: 32),
+            ],
           ),
-          const SizedBox(height: 32),
-        ],
+        ),
       ),
     );
   }
@@ -183,6 +345,11 @@ class VendorAnalyticsTab extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFECE6DA)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
@@ -191,11 +358,24 @@ class VendorAnalyticsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: theme.textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF8D7F70),
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    value,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2B1D0E)),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF8D7F70)),
+                  ),
                 ],
               ),
             ),
@@ -210,7 +390,7 @@ class VendorAnalyticsTab extends StatelessWidget {
                     value: percentage,
                     strokeWidth: 6,
                     color: activeColor,
-                    backgroundColor: activeColor.withValues(alpha: 0.1),
+                    backgroundColor: activeColor.withOpacity(0.1),
                     strokeCap: StrokeCap.round,
                   ),
                   Center(
@@ -236,8 +416,6 @@ class VendorAnalyticsTab extends StatelessWidget {
     required String amount,
     bool isHighest = false,
   }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
         final totalHeight = constraints.maxHeight - 32;
@@ -249,7 +427,7 @@ class VendorAnalyticsTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: isHighest ? FontWeight.bold : FontWeight.normal,
-                color: isHighest ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                color: isHighest ? const Color(0xFFFFC300) : const Color(0xFF8D7F70),
               ),
             ),
             const SizedBox(height: 4),
@@ -259,8 +437,8 @@ class VendorAnalyticsTab extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isHighest
-                      ? [colorScheme.primary, colorScheme.primary.withValues(alpha: 0.6)]
-                      : [colorScheme.primary.withValues(alpha: 0.3), colorScheme.primary.withValues(alpha: 0.5)],
+                      ? [const Color(0xFFFFC300), const Color(0xFFFFD54F)]
+                      : [const Color(0xFFECE6DA), const Color(0xFFECE6DA)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -273,7 +451,7 @@ class VendorAnalyticsTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isHighest ? FontWeight.bold : FontWeight.normal,
-                color: isHighest ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+                color: isHighest ? const Color(0xFF2B1D0E) : const Color(0xFF8D7F70),
               ),
             ),
           ],
@@ -289,8 +467,6 @@ class VendorAnalyticsTab extends StatelessWidget {
     required double percentage,
     bool isPeak = false,
   }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -303,14 +479,14 @@ class VendorAnalyticsTab extends StatelessWidget {
                 time,
                 style: TextStyle(
                   fontWeight: isPeak ? FontWeight.bold : FontWeight.normal,
-                  color: isPeak ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+                  color: isPeak ? const Color(0xFF2B1D0E) : const Color(0xFF8D7F70),
                 ),
               ),
               Text(
                 '$count orders',
                 style: TextStyle(
                   fontWeight: isPeak ? FontWeight.bold : FontWeight.normal,
-                  color: isPeak ? colorScheme.primary : colorScheme.onSurface,
+                  color: isPeak ? const Color(0xFFFFC300) : const Color(0xFF2B1D0E),
                 ),
               ),
             ],
@@ -319,10 +495,10 @@ class VendorAnalyticsTab extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: percentage,
+              value: percentage.isNaN ? 0.0 : percentage,
               minHeight: 8,
-              color: isPeak ? Colors.amber[700] : colorScheme.primary.withValues(alpha: 0.4),
-              backgroundColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+              color: isPeak ? const Color(0xFFFFC300) : const Color(0xFFECE6DA),
+              backgroundColor: const Color(0xFFF5F0E3),
             ),
           ),
         ],
@@ -337,8 +513,6 @@ class VendorAnalyticsTab extends StatelessWidget {
     required String revenue,
     required double percentage,
   }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
@@ -351,18 +525,18 @@ class VendorAnalyticsTab extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(itemName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text('$count sold', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13)),
+                    Text(itemName, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2B1D0E))),
+                    Text('$count sold', style: const TextStyle(color: Color(0xFF8D7F70), fontSize: 13)),
                   ],
                 ),
                 const SizedBox(height: 6),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: LinearProgressIndicator(
-                    value: percentage,
+                    value: percentage.isNaN ? 0.0 : percentage,
                     minHeight: 6,
-                    color: colorScheme.primary,
-                    backgroundColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                    color: const Color(0xFFFFC300),
+                    backgroundColor: const Color(0xFFECE6DA),
                   ),
                 ),
               ],
@@ -375,7 +549,7 @@ class VendorAnalyticsTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(revenue, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[700])),
-                Text('Revenue', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11)),
+                const Text('Revenue', style: TextStyle(color: Color(0xFF8D7F70), fontSize: 11)),
               ],
             ),
           ),

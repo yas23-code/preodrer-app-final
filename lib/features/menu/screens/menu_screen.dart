@@ -12,7 +12,9 @@ import '../models/menu_item.dart';
 import '../../../shared/widgets/customer_bottom_navbar.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
-  const MenuScreen({super.key});
+  final String? initialCategoryId;
+
+  const MenuScreen({super.key, this.initialCategoryId});
 
   @override
   ConsumerState<MenuScreen> createState() => _MenuScreenState();
@@ -21,7 +23,7 @@ class MenuScreen extends ConsumerStatefulWidget {
 class _MenuScreenState extends ConsumerState<MenuScreen>
     with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategory = 'All';
+  late String _selectedCategory;
   String _searchQuery = '';
 
   // Animation controllers for floating cart button
@@ -31,61 +33,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
   late final Animation<double> _bounceAnim;
   int _prevCartCount = 0;
 
-  // Category list configuration
-  final List<Map<String, String>> _categories = const [
-    {
-      'name': 'All',
-      'image': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Burger',
-      'image': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Pizza',
-      'image': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Rolls',
-      'image': 'https://images.unsplash.com/photo-1626700051175-6518c4793f4f?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Sandwich',
-      'image': 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Cold Coffee',
-      'image': 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Momos',
-      'image': 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Chinese',
-      'image': 'https://images.unsplash.com/photo-1526318896980-cf78c088247c?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Pasta',
-      'image': 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Snacks',
-      'image': 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Maggie',
-      'image': 'https://images.unsplash.com/photo-1612966608967-312ba5987233?auto=format&fit=crop&w=150&q=80',
-    },
-    {
-      'name': 'Paratha',
-      'image': 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?auto=format&fit=crop&w=150&q=80',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
+    _selectedCategory = widget.initialCategoryId ?? 'all';
     // Fade+scale controller (300ms)
     _fadeScaleCtrl = AnimationController(
       vsync: this,
@@ -156,6 +107,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
     final currentCanteen = ref.watch(currentCanteenProvider);
     final cartState = ref.watch(cartControllerProvider).asData?.value;
     final totalItemsInCart = cartState?.itemCount ?? 0;
+
+    final activeOrders = ref.watch(canteenActiveOrdersCountProvider(currentCanteen?.id ?? '')).value ?? 0;
+    final maxOrders = ref.watch(canteenMaxOrdersProvider(currentCanteen?.id ?? '')).value ?? 10;
+    final isBusy = activeOrders >= maxOrders;
 
     final isClosed = currentCanteen != null && !currentCanteen.isOpen;
 
@@ -256,6 +211,45 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
               color: borderColor,
             ),
             const SizedBox(height: 16),
+
+            if (isBusy)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFFCDD2), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Canteen is Busy',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFC62828),
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            'Reached capacity limit ($activeOrders/$maxOrders in-progress orders). Ordering is temporarily paused.',
+                            style: const TextStyle(
+                              color: Color(0xFFC62828),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // ── SEARCH SECTION ──────────────────────────────────────────────
             Padding(
@@ -427,79 +421,104 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
               )
             else ...[
               // ── CATEGORY FILTER ──────────────────────────────────────────
-              SizedBox(
-                height: 128,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _categories.length,
-                  itemBuilder: (context, index) {
-                    final cat = _categories[index];
-                    final name = cat['name']!;
-                    final isSelected = _selectedCategory == name;
-                    return GestureDetector(
-                      onTap: () =>
-                          setState(() => _selectedCategory = name),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 84,
-                              height: 84,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? primaryYellow
-                                      : Colors.transparent,
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.07),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: CachedNetworkImage(
-                                  imageUrl: cat['image']!,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(
-                                    color: const Color(0xFFEEEEEE),
-                                  ),
-                                  errorWidget: (_, __, ___) => Container(
-                                    color: const Color(0xFFEEEEEE),
-                                    child: const Icon(Icons.restaurant,
-                                        size: 20,
-                                        color: Colors.grey),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              name,
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 11,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: isSelected
-                                    ? textPrimary
-                                    : textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+              ref.watch(canteenCategoriesProvider(currentCanteen?.id ?? '')).when(
+                loading: () => const SizedBox(
+                  height: 128,
+                  child: Center(child: CircularProgressIndicator(color: primaryYellow)),
                 ),
+                error: (e, _) => const SizedBox.shrink(),
+                data: (dbCategories) {
+                  final List<Map<String, dynamic>> categoriesList = [
+                    {
+                      'id': 'all',
+                      'name': 'All',
+                      'image_url': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=150&q=80',
+                    },
+                    ...dbCategories,
+                  ];
+
+                  return SizedBox(
+                    height: 128,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: categoriesList.length,
+                      itemBuilder: (context, index) {
+                        final cat = categoriesList[index];
+                        final name = cat['name'] as String;
+                        final catId = cat['id'] as String;
+                        final isSelected = _selectedCategory == catId;
+                        
+                        final imageUrl = cat['image_url'] as String?;
+                        final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+                        final finalImage = hasImage
+                            ? imageUrl
+                            : 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=150&q=80';
+
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedCategory = catId),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 84,
+                                  height: 84,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? primaryYellow
+                                          : Colors.transparent,
+                                      width: 2.5,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.07),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: CachedNetworkImage(
+                                      imageUrl: finalImage,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(
+                                        color: const Color(0xFFEEEEEE),
+                                      ),
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: const Color(0xFFEEEEEE),
+                                        child: const Icon(Icons.restaurant,
+                                            size: 20,
+                                            color: Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 11,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? textPrimary
+                                        : textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 8),
@@ -517,15 +536,9 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                   data: (allItems) {
                     // Filter by category
                     List<MenuItem> items = allItems;
-                    if (_selectedCategory != 'All') {
-                      final cat = _selectedCategory.toLowerCase();
+                    if (_selectedCategory != 'all') {
                       items = items
-                          .where((item) =>
-                              item.name.toLowerCase().contains(cat) ||
-                              (item.description
-                                      ?.toLowerCase()
-                                      .contains(cat) ??
-                                  false))
+                          .where((item) => item.categoryId == _selectedCategory)
                           .toList();
                     }
                     // Filter by search query
@@ -573,9 +586,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                         String? publicUrl;
                         if (item.imageUrl != null &&
                             item.imageUrl!.isNotEmpty) {
-                          publicUrl = supabase.storage
-                              .from(kFoodImagesBucketName)
-                              .getPublicUrl(item.imageUrl!);
+                          publicUrl = item.imageUrl!.startsWith('http')
+                              ? item.imageUrl
+                              : supabase.storage
+                                  .from(kFoodImagesBucketName)
+                                  .getPublicUrl(item.imageUrl!);
                         }
                         final imageUrl = _getFoodImage(item, publicUrl);
                         final rating = _getRating(item);
@@ -701,7 +716,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                                             height: 32,
                                             width: 90,
                                             decoration: BoxDecoration(
-                                              color: primaryYellow,
+                                              color: (isBusy && cartQty == 0) ? Colors.grey[300] : primaryYellow,
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                             ),
@@ -744,7 +759,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                                                         ),
                                                       ),
                                                       GestureDetector(
-                                                        onTap: () {
+                                                        onTap: isBusy ? () {
+                                                          ScaffoldMessenger.of(context).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text('Canteen is busy. Ordering is temporarily paused.'),
+                                                              behavior: SnackBarBehavior.floating,
+                                                            ),
+                                                          );
+                                                        } : () {
                                                           ref
                                                               .read(cartControllerProvider
                                                                   .notifier)
@@ -767,7 +789,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen>
                                                     ],
                                                   )
                                                 : GestureDetector(
-                                                    onTap: () {
+                                                    onTap: isBusy ? () {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text('Canteen is busy. Ordering is temporarily paused.'),
+                                                          behavior: SnackBarBehavior.floating,
+                                                        ),
+                                                      );
+                                                    } : () {
                                                       ref
                                                           .read(cartControllerProvider
                                                               .notifier)

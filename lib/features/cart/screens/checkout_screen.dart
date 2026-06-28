@@ -8,6 +8,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../shared/utils/formatters.dart';
 import '../providers/cart_controller.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../canteen/providers/canteen_provider.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -131,6 +132,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         body: const Center(child: Text('Your cart is empty')),
       );
     }
+
+    final canteenId = cart.lines.values.firstOrNull?.item.canteenId ?? '';
+    final activeOrders = ref.watch(canteenActiveOrdersCountProvider(canteenId)).value ?? 0;
+    final maxOrders = ref.watch(canteenMaxOrdersProvider(canteenId)).value ?? 10;
+    final isBusy = activeOrders >= maxOrders;
 
     final lineValues = cart.lines.values.toList();
 
@@ -343,10 +349,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           child: SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _isProcessing ? null : _handlePlaceOrder,
+              onPressed: (isBusy || _isProcessing) ? null : _handlePlaceOrder,
+              style: isBusy ? FilledButton.styleFrom(backgroundColor: Colors.grey[400]) : null,
               child: _isProcessing
                   ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text('Place Order  •  ${formatCurrency(cart.totalAmount)}'),
+                  : isBusy
+                      ? const Text('Canteen is at Max Capacity')
+                      : Text('Place Order  •  ${formatCurrency(cart.totalAmount)}'),
             ),
           ),
         ),

@@ -52,3 +52,16 @@ class MenuController extends AsyncNotifier<List<MenuItem>> {
     return items;
   }
 }
+
+final canteenCategoriesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, canteenId) async {
+  final supabase = ref.read(supabaseClientProvider);
+  if (canteenId.isEmpty) return [];
+  
+  final response = await supabase
+      .from(kCategoriesTableName)
+      .select('id, name, image_url')
+      .eq('canteen_id', canteenId)
+      .neq('name', '__COUPONS__');
+      
+  return List<Map<String, dynamic>>.from(response);
+});

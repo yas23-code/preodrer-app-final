@@ -180,9 +180,11 @@ class _PopularItemCard extends ConsumerWidget {
     // Resolve image URL from Supabase storage
     final imageUrl = item.imageUrl == null
         ? null
-        : supabase.storage
-            .from(kFoodImagesBucketName)
-            .getPublicUrl(item.imageUrl!);
+        : item.imageUrl!.startsWith('http')
+            ? item.imageUrl
+            : supabase.storage
+                .from(kFoodImagesBucketName)
+                .getPublicUrl(item.imageUrl!);
 
     return Container(
       width: 160,

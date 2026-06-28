@@ -5,6 +5,8 @@ import '../../menu/models/menu_item.dart';
 import '../providers/vendor_menu_provider.dart';
 import 'add_menu_item_screen.dart';
 import 'edit_menu_item_modal.dart';
+import '../../../core/supabase_client.dart';
+import '../../../core/constants.dart';
 
 class ManageMenuScreen extends ConsumerStatefulWidget {
   const ManageMenuScreen({super.key});
@@ -280,12 +282,23 @@ class _ManageMenuScreenState extends ConsumerState<ManageMenuScreen> {
                                         color: colorScheme.surfaceContainerHighest,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: item.imageUrl != null
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Image.network(item.imageUrl!, fit: BoxFit.cover),
-                                          )
-                                        : Icon(Icons.fastfood, color: colorScheme.onSurfaceVariant),
+                                      child: (() {
+                                        String? resolvedUrl = item.imageUrl;
+                                        if (resolvedUrl != null && resolvedUrl.isNotEmpty) {
+                                          if (!resolvedUrl.startsWith('http')) {
+                                            final supabase = ref.read(supabaseClientProvider);
+                                            resolvedUrl = supabase.storage
+                                                .from(kFoodImagesBucketName)
+                                                .getPublicUrl(resolvedUrl);
+                                          }
+                                        }
+                                        return resolvedUrl != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: Image.network(resolvedUrl, fit: BoxFit.cover),
+                                              )
+                                            : Icon(Icons.fastfood, color: colorScheme.onSurfaceVariant);
+                                      })(),
                                     ),
                                     const SizedBox(width: 12),
                                     

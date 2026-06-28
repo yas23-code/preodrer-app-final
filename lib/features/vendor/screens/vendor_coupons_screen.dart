@@ -5,6 +5,7 @@ import '../../../core/supabase_client.dart';
 import '../../menu/models/menu_item.dart';
 import '../../menu/providers/menu_provider.dart';
 import '../providers/coupons_provider.dart';
+import '../providers/vendor_menu_provider.dart';
 
 class VendorCouponsScreen extends ConsumerStatefulWidget {
   const VendorCouponsScreen({super.key});
@@ -98,7 +99,12 @@ class _VendorCouponsScreenState extends ConsumerState<VendorCouponsScreen> {
                   try {
                     final supabase = ref.read(supabaseClientProvider);
                     final catId = await ref.read(couponsCategoryIdProvider.future);
-                    final canteenId = ref.read(selectedCanteenIdProvider);
+                    
+                    final canteen = await ref.read(vendorCanteenProvider.future);
+                    final canteenId = canteen?['id'] as String?;
+                    if (canteenId == null || canteenId.isEmpty) {
+                      throw Exception("No canteen found for this vendor");
+                    }
 
                     if (catId == null) {
                       throw Exception("Failed to resolve virtual coupons category");

@@ -10,22 +10,9 @@ import 'vendor_coupons_screen.dart';
 import 'vendor_settings_tab.dart';
 import 'vendor_analytics_tab.dart';
 import '../../canteen/providers/canteen_provider.dart';
+import '../providers/vendor_menu_provider.dart';
 
-final vendorCanteenProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
-  final supabase = ref.read(supabaseClientProvider);
-  final userAsync = ref.watch(authControllerProvider);
-  final userId = userAsync.value?.id;
-  
-  if (userId == null) return null;
-  
-  final res = await supabase
-      .from('canteens')
-      .select('id, name, location, is_open, banned')
-      .eq('vendor_id', userId)
-      .maybeSingle();
-      
-  return res;
-});
+
 
 class VendorDashboardScreen extends ConsumerStatefulWidget {
   const VendorDashboardScreen({super.key});
@@ -176,6 +163,92 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
         _isSaving = false;
       });
     }
+  }
+
+  void _showMaxOrdersLimitDialog(int currentLimit) {
+    final ctrl = TextEditingController(text: currentLimit.toString());
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFFFFF8E7),
+          title: const Text('In-Progress Orders Limit', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2B1D0E))),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Set the maximum number of in-progress orders you can handle at a time.'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Max Orders Limit',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFC300), foregroundColor: const Color(0xFF2B1D0E)),
+              onPressed: () async {
+                final limit = int.tryParse(ctrl.text.trim());
+                if (limit == null || limit <= 0) return;
+                Navigator.pop(context);
+                setState(() => _isSaving = true);
+                try {
+                  final canteenId = ref.read(vendorCanteenProvider).value?['id'];
+                  if (canteenId != null) {
+                    final supabase = ref.read(supabaseClientProvider);
+                    await supabase
+                        .from('canteens')
+                        .update({'max_concurrent_orders': limit})
+                        .eq('id', canteenId);
+                    ref.invalidate(vendorCanteenProvider);
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    final errorMsg = e.toString();
+                    if (errorMsg.contains('max_concurrent_orders') || errorMsg.contains('PGRST204')) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: const Color(0xFFFFF8E7),
+                          title: const Text('Database Update Required', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2B1D0E))),
+                          content: const Text(
+                            'The database schema is missing the concurrent orders limit column.\n\n'
+                            'Please run the following SQL in your Supabase SQL Editor:\n\n'
+                            'ALTER TABLE canteens \n'
+                            'ADD COLUMN IF NOT EXISTS max_concurrent_orders INTEGER DEFAULT 10;'
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to update limit: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                } finally {
+                  setState(() => _isSaving = false);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showSettingsDialog(Map<String, dynamic>? canteenData) {
@@ -1059,6 +1132,8 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       _isOpen = canteenAsync.value?['is_open'] as bool? ?? true;
     }
 
+    final maxConcurrent = canteenAsync.value?['max_concurrent_orders'] as int? ?? 10;
+
     // Calculating Metrics
     final todayOrdersCount = allOrders.length;
     final todayRevenue = allOrders.where((o) => o['raw_status'] == 'completed').fold(0.0, (sum, o) {
@@ -1175,10 +1250,13 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                   ),
                   const SizedBox(width: 12),
                   _buildDashboardMetricCard(
-                    title: "Pending / Live",
-                    value: pendingCount.toString(),
+                    title: "Pending / Live (Limit: $maxConcurrent)",
+                    value: '$pendingCount / $maxConcurrent',
                     icon: Icons.pending_actions,
                     color: const Color(0xFFEF5350), // Red
+                    onTap: () {
+                      _showMaxOrdersLimitDialog(maxConcurrent);
+                    },
                   ),
                 ],
               ),
@@ -1299,48 +1377,52 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
     required String value,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 14),
                 ),
-                child: Icon(icon, color: Colors.white, size: 14),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              ],
             ),
-          ),
-        ],
+            const Spacer(),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -161,7 +161,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Standalone authenticated routes (no bottom nav) ───────────
       GoRoute(
         path: '/menu',
-        builder: (context, state) => const MenuScreen(),
+        builder: (context, state) {
+          final categoryId = state.uri.queryParameters['category'];
+          return MenuScreen(initialCategoryId: categoryId);
+        },
       ),
       GoRoute(
         path: '/order/:id',

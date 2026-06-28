@@ -18,19 +18,19 @@ class StorageService {
   StorageService(this._supabase);
 
   /// Uploads a file to Supabase Storage and returns the public URL.
-  Future<String> uploadImage(File file, {String? folder}) async {
+  Future<String> uploadImage(File file, {String? folder, String bucket = 'item-images'}) async {
     final extension = p.extension(file.path);
     final fileName = '${_uuid.v4()}$extension';
     final path = folder != null ? '$folder/$fileName' : fileName;
 
-    await _supabase.storage.from(kFoodImagesBucketName).upload(
+    await _supabase.storage.from(bucket).upload(
           path,
           file,
           fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
         );
 
     final publicUrl =
-        _supabase.storage.from(kFoodImagesBucketName).getPublicUrl(path);
+        _supabase.storage.from(bucket).getPublicUrl(path);
 
     return publicUrl;
   }

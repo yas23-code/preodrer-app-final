@@ -5,40 +5,19 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_typography.dart';
 
 /// A category model for the horizontal strip.
-class _Category {
+class CategoryItem {
   final String emoji;
   final String label;
   final String value;
 
-  const _Category({
+  const CategoryItem({
     required this.emoji,
     required this.label,
     required this.value,
   });
 }
 
-/// Predefined food categories displayed in the home screen.
-const _kCategories = [
-  _Category(emoji: '⭐', label: 'All', value: 'all'),
-  _Category(emoji: '🍟', label: 'Snacks', value: 'snacks'),
-  _Category(emoji: '☕', label: 'Beverages', value: 'beverages'),
-  _Category(emoji: '🍛', label: 'Meals', value: 'meals'),
-  _Category(emoji: '🍰', label: 'Desserts', value: 'desserts'),
-  _Category(emoji: '🎁', label: 'Combos', value: 'combos'),
-];
-
 /// Horizontal scrolling category strip with emoji-labeled chips.
-///
-/// Displays predefined food categories as tappable chips. The currently
-/// selected category is highlighted with the primary color background
-/// and a subtle scale animation.
-///
-/// ```dart
-/// CategoryStrip(
-///   selectedCategory: 'all',
-///   onCategoryTap: (category) => print('Selected: $category'),
-/// )
-/// ```
 class CategoryStrip extends StatelessWidget {
   /// Callback fired when a category chip is tapped.
   final ValueChanged<String> onCategoryTap;
@@ -46,9 +25,13 @@ class CategoryStrip extends StatelessWidget {
   /// The currently selected category value.
   final String selectedCategory;
 
+  /// List of categories to display.
+  final List<CategoryItem> categories;
+
   const CategoryStrip({
     super.key,
     required this.onCategoryTap,
+    required this.categories,
     this.selectedCategory = 'all',
   });
 
@@ -65,7 +48,7 @@ class CategoryStrip extends StatelessWidget {
           horizontal: AppShadows.spacingLg,
         ),
         child: Row(
-          children: _kCategories.map((category) {
+          children: categories.map((category) {
             final isSelected = category.value == selectedCategory;
 
             return Padding(

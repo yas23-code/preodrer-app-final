@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants.dart';
 import '../../../core/supabase_client.dart';
 import '../../menu/models/menu_item.dart';
-import '../../menu/providers/menu_provider.dart';
+import 'vendor_menu_provider.dart';
 
 // Provider to get the canteen's __COUPONS__ category ID
 final couponsCategoryIdProvider = FutureProvider<String?>((ref) async {
   final supabase = ref.read(supabaseClientProvider);
-  final canteenId = ref.watch(selectedCanteenIdProvider);
-  if (canteenId.isEmpty) return null;
+  final canteen = await ref.watch(vendorCanteenProvider.future);
+  final canteenId = canteen?['id'] as String?;
+  if (canteenId == null || canteenId.isEmpty) return null;
 
   try {
     // Find or create __COUPONS__ category

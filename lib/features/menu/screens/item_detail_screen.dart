@@ -45,7 +45,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
         }
 
         final imageUrl = item.imageUrl != null
-            ? supabase.storage.from(kFoodImagesBucketName).getPublicUrl(item.imageUrl!)
+            ? item.imageUrl!.startsWith('http')
+                ? item.imageUrl
+                : supabase.storage.from(kFoodImagesBucketName).getPublicUrl(item.imageUrl!)
             : null;
         final totalPrice = item.price * _quantity;
 

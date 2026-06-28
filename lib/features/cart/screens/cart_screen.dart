@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,8 @@ import '../../canteen/providers/canteen_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../vendor/providers/coupons_provider.dart';
 import '../../menu/models/menu_item.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_shadows.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -27,13 +30,6 @@ class _CartScreenState extends ConsumerState<CartScreen>
 
   late final AnimationController _successAnimController;
   late final Animation<double> _successScaleAnim;
-
-  // Design tokens
-  static const _bg = Color(0xFFFFF9EC);
-  static const _yellow = Color(0xFFFFC107);
-  static const _red = Color(0xFFE53935);
-  static const _textPrimary = Color(0xFF222222);
-  static const _textSecondary = Color(0xFF666666);
 
   bool _phoneAutoFilled = false;
 
@@ -91,7 +87,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to place order: $e'),
-          backgroundColor: _red,
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -99,9 +95,13 @@ class _CartScreenState extends ConsumerState<CartScreen>
   }
 
   // ─── Success overlay ──────────────────────────────────────────────
-  Widget _buildSuccessOverlay() {
+  Widget _buildSuccessOverlay(BuildContext context, bool isDark) {
+    final bg = isDark ? AppColors.backgroundDark : const Color(0xFFFFF9EC);
+    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Container(
-      color: _bg,
+      color: bg,
       child: Center(
         child: ScaleTransition(
           scale: _successScaleAnim,
@@ -112,31 +112,31 @@ class _CartScreenState extends ConsumerState<CartScreen>
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: _yellow.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF4CAF50), size: 64),
+                    color: AppColors.accent, size: 64),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 '🎉 Order Placed\nSuccessfully!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: _textPrimary,
+                  color: textPrimary,
                   height: 1.3,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Redirecting to your orders...',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 13,
-                  color: _textSecondary,
+                  color: textSecondary,
                 ),
               ),
             ],
@@ -148,28 +148,22 @@ class _CartScreenState extends ConsumerState<CartScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bg = isDark ? AppColors.backgroundDark : const Color(0xFFFFF9EC);
+    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
     final cartAsync = ref.watch(cartControllerProvider);
     final currentCanteen = ref.watch(currentCanteenProvider);
     final canteenId = currentCanteen?.id ?? '';
     final couponsAsync = ref.watch(canteenCouponsProvider(canteenId));
 
-    debugPrint('[UI_WIRING] cart_screen.dart build() called');
-    if (cartAsync.hasValue) {
-      final cart = cartAsync.value!;
-      debugPrint('[DB_DIAGNOSIS] cart_screen.dart: cart.itemCount=${cart.itemCount}, keys=${cart.lines.keys}');
-      for (final line in cart.lines.values) {
-        debugPrint('[DB_DIAGNOSIS] cart_screen.dart: rendering item="${line.item.name}", quantity=${line.quantity}');
-      }
-    } else {
-      debugPrint('[DB_DIAGNOSIS] cart_screen.dart: cartAsync has no value yet');
-    }
-
-    if (_orderSuccess) return _buildSuccessOverlay();
+    if (_orderSuccess) return _buildSuccessOverlay(context, isDark);
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bg,
       body: cartAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: _yellow)),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
         error: (e, _) => Center(child: Text('Failed to load cart: $e')),
         data: (cart) {
           final orderAmount = cart.totalAmount;
@@ -193,20 +187,20 @@ class _CartScreenState extends ConsumerState<CartScreen>
                         children: [
                           GestureDetector(
                             onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-                            child: const Icon(Icons.arrow_back,
-                                size: 22, color: _textPrimary),
+                            child: Icon(Icons.arrow_back,
+                                size: 22, color: textPrimary),
                           ),
                           const SizedBox(width: 10),
-                          const Icon(Icons.shopping_cart_rounded,
-                              color: _textPrimary, size: 22),
+                          Icon(Icons.shopping_cart_rounded,
+                              color: textPrimary, size: 22),
                           const SizedBox(width: 8),
-                          const Text(
+                          Text(
                             'Your Cart',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: _textPrimary,
+                              color: textPrimary,
                             ),
                           ),
                         ],
@@ -217,58 +211,89 @@ class _CartScreenState extends ConsumerState<CartScreen>
                   // ── SCROLLABLE BODY ───────────────────────────────────
                   Expanded(
                     child: cart.lines.isEmpty
-                        ? _buildEmptyCart()
+                        ? _buildEmptyCart(context, isDark)
                         : ListView(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                             physics: const BouncingScrollPhysics(),
                             children: [
-                              // Canteen + ETA
-                              _buildCanteenHeader(
-                                  currentCanteen?.name ?? 'Canteen'),
-                              const SizedBox(height: 14),
+                              // Canteen + ETA Card
+                              _buildCanteenHeader(context, currentCanteen?.name ?? 'Canteen', isDark),
+                              const SizedBox(height: 16),
 
-                              // Cart items — compact rows
-                              ...cart.lines.values.map((line) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: _buildCartItemRow(
-                                    line.item.name,
-                                    line.item.price,
-                                    line.quantity,
-                                    line.item.prepTime,
-                                    onDecrement: () => ref
-                                        .read(cartControllerProvider.notifier)
-                                        .decrementItem(line.item),
-                                    onIncrement: () => ref
-                                        .read(cartControllerProvider.notifier)
-                                        .addItem(line.item),
-                                    onDelete: () => ref
-                                        .read(cartControllerProvider.notifier)
-                                        .removeItem(line.item),
-                                  ),
-                                );
-                              }),
-
-                              const SizedBox(height: 10),
-
-                              // Coupon + Price breakdown
-                              _buildCouponAndPriceSection(
-                                orderAmount: orderAmount,
-                                packingCharge: packingCharge,
-                                discountAmount: _discountAmount,
-                                total: total,
-                                couponsAsync: couponsAsync,
+                              // Cart items Card container
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                                  borderRadius: AppShadows.borderRadiusLg,
+                                  boxShadow: AppShadows.cardShadow(context),
+                                ),
+                                child: Column(
+                                  children: [
+                                    ...() {
+                                      final List<Widget> itemRows = [];
+                                      final lines = cart.lines.values.toList();
+                                      for (int i = 0; i < lines.length; i++) {
+                                        final line = lines[i];
+                                        itemRows.add(
+                                          _buildCartItemRow(
+                                            context,
+                                            line.item.name,
+                                            line.item.price,
+                                            line.quantity,
+                                            line.item.prepTime,
+                                            isDark,
+                                            onDecrement: () => ref
+                                                .read(cartControllerProvider.notifier)
+                                                .decrementItem(line.item),
+                                            onIncrement: () => ref
+                                                .read(cartControllerProvider.notifier)
+                                                .addItem(line.item),
+                                            onDelete: () => ref
+                                                .read(cartControllerProvider.notifier)
+                                                .removeItem(line.item),
+                                          ),
+                                        );
+                                        if (i < lines.length - 1) {
+                                          itemRows.add(Divider(
+                                            height: 1,
+                                            thickness: 0.5,
+                                            color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+                                          ));
+                                        }
+                                      }
+                                      return itemRows;
+                                    }(),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(height: 16),
 
-                              const SizedBox(height: 14),
+                              // Coupon + Price breakdown Card
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                                  borderRadius: AppShadows.borderRadiusLg,
+                                  boxShadow: AppShadows.cardShadow(context),
+                                ),
+                                child: _buildCouponAndPriceSection(
+                                  context: context,
+                                  isDark: isDark,
+                                  orderAmount: orderAmount,
+                                  packingCharge: packingCharge,
+                                  discountAmount: _discountAmount,
+                                  total: total,
+                                  couponsAsync: couponsAsync,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
 
-                              // Phone
-                              _buildPhoneSection(),
+                              // Phone Card
+                              _buildPhoneSection(context, isDark),
+                              const SizedBox(height: 16),
 
-                              const SizedBox(height: 14),
-
-                              // Order type
-                              _buildOrderTypeSection(),
+                              // Order type Card
+                              _buildOrderTypeSection(context, isDark),
                             ],
                           ),
                   ),
@@ -281,7 +306,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: _buildBottomBar(cart.lines.isEmpty, total),
+                  child: _buildBottomBar(context, cart.lines.isEmpty, total, isDark),
                 ),
             ],
           );
@@ -291,324 +316,358 @@ class _CartScreenState extends ConsumerState<CartScreen>
   }
 
   // ─── Empty cart ────────────────────────────────────────────────────
-  Widget _buildEmptyCart() {
+  Widget _buildEmptyCart(BuildContext context, bool isDark) {
+    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.shopping_cart_outlined,
-              size: 64, color: Colors.grey.shade300),
+              size: 64, color: isDark ? Colors.grey.shade800 : Colors.grey.shade300),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Your cart is empty',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: _textPrimary,
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Add some delicious food!',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: _textSecondary),
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: textSecondary),
           ),
         ],
       ),
     );
   }
 
-  // ─── Canteen + ETA (compact, matches reference) ────────────────────
-  Widget _buildCanteenHeader(String canteenName) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                canteenName,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: _textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                'Your order from this canteen',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  color: _textSecondary,
-                ),
-              ),
-            ],
+  // ─── Canteen + ETA Card ────────────────────────────────────────────
+  Widget _buildCanteenHeader(BuildContext context, String canteenName, bool isDark) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: AppShadows.borderRadiusLg,
+        boxShadow: AppShadows.cardShadow(context),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.storefront_rounded, color: AppColors.primary, size: 24),
           ),
-        ),
-        // ETA badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: _red.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.access_time_rounded, color: _red, size: 16),
-              SizedBox(width: 4),
-              Text(
-                '~30\nmin',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: _red,
-                  height: 1.2,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  canteenName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  'Your order from this canteen',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontFamily: 'Poppins',
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          // ETA badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: AppShadows.borderRadiusMd,
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.access_time_rounded, color: AppColors.primary, size: 16),
+                SizedBox(width: 6),
+                Text(
+                  '~30 min',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ─── Cart item row (compact, no image — matches reference) ─────────
+  // ─── Cart item row ────────────────────────────────────────────────
   Widget _buildCartItemRow(
+    BuildContext context,
     String name,
     double price,
     int quantity,
-    int? prepTime, {
+    int? prepTime,
+    bool isDark, {
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
     required VoidCallback onDelete,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Left side — name + prep time + price
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _textPrimary,
+    final theme = Theme.of(context);
+    final textSecondaryColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left side — name + prep time + price
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  if (prepTime != null) ...[
-                    const SizedBox(width: 6),
-                    Icon(Icons.access_time, size: 13, color: Colors.grey.shade500),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${prepTime}m',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
+                    if (prepTime != null) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.access_time, size: 13, color: textSecondaryColor),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${prepTime}m',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: textSecondaryColor,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '₹${price.toStringAsFixed(0)} × $quantity',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontFamily: 'Poppins',
+                    color: textSecondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Right side — qty controls + delete
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _qtyCircle(Icons.remove, onDecrement, isDark),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  '$quantity',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '₹${price.toStringAsFixed(0)} × $quantity',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  color: _textSecondary,
+              _qtyCircle(Icons.add, onIncrement, isDark),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: onDelete,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded,
+                      color: AppColors.error, size: 18),
                 ),
               ),
             ],
           ),
-        ),
-
-        // Right side — qty controls + delete
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _qtyCircle(Icons.remove, onDecrement),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                '$quantity',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: _textPrimary,
-                ),
-              ),
-            ),
-            _qtyCircle(Icons.add, onIncrement),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onDelete,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: _red,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white, size: 16),
-              ),
-            ),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _qtyCircle(IconData icon, VoidCallback onTap) {
+  Widget _qtyCircle(IconData icon, VoidCallback onTap, bool isDark) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F0E3),
+          color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.shade300, width: 0.5),
         ),
-        child: Icon(icon, size: 16, color: _textPrimary),
+        child: Icon(icon, size: 16, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
       ),
     );
   }
 
-  // ─── Coupon + Price summary (all inline, compact) ──────────────────
+  // ─── Coupon + Price summary Card contents ─────────────────────────
   Widget _buildCouponAndPriceSection({
+    required BuildContext context,
+    required bool isDark,
     required double orderAmount,
     required double packingCharge,
     required double discountAmount,
     required double total,
     required AsyncValue<List<MenuItem>> couponsAsync,
   }) {
+    final theme = Theme.of(context);
+    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Coupon heading
         Row(
-          children: const [
-            Icon(Icons.local_offer_outlined, color: _red, size: 18),
-            SizedBox(width: 6),
+          children: [
+            const Icon(Icons.local_offer_outlined, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
             Text(
               'Coupon Code',
-              style: TextStyle(
+              style: theme.textTheme.titleSmall?.copyWith(
                 fontFamily: 'Poppins',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _textPrimary,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
 
-        // Input + Apply
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _yellow, width: 1.2),
-                ),
+        // Input + Apply in a single container
+        Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+            borderRadius: BorderRadius.circular(AppShadows.radiusMd),
+            border: Border.all(
+              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
+              Expanded(
                 child: TextField(
                   controller: _couponController,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, color: _textPrimary),
+                  textCapitalization: TextCapitalization.characters,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'ENTER COUPON CODE',
                     hintStyle: TextStyle(
                       fontFamily: 'Poppins',
-                      fontSize: 13,
-                      color: Colors.grey.shade400,
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
                       letterSpacing: 0.5,
                     ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () {
-                final enteredCode = _couponController.text.trim().toUpperCase();
-                final coupons = couponsAsync.value ?? [];
-                final matching = coupons.where((c) => c.name == enteredCode).firstOrNull;
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  final enteredCode = _couponController.text.trim().toUpperCase();
+                  final coupons = couponsAsync.value ?? [];
+                  final matching = coupons.where((c) => c.name == enteredCode).firstOrNull;
 
-                if (matching != null) {
-                  setState(() {
-                    _discountAmount = matching.price;
-                    _appliedCouponCode = matching.name;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Coupon "$enteredCode" applied! Flat ₹${matching.price.toStringAsFixed(0)} discount.'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.green[700],
-                    ),
-                  );
-                } else {
-                  setState(() {
-                    _discountAmount = 0.0;
-                    _appliedCouponCode = null;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Invalid or expired coupon code.'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
-                }
-              },
-              child: Container(
-                height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _red, width: 1.2),
-                ),
-                child: const Center(
-                  child: Text(
-                    'Apply',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _red,
+                  if (matching != null) {
+                    setState(() {
+                      _discountAmount = matching.price;
+                      _appliedCouponCode = matching.name;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Coupon "$enteredCode" applied! Flat ₹${matching.price.toStringAsFixed(0)} discount.'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  } else {
+                    setState(() {
+                      _discountAmount = 0.0;
+                      _appliedCouponCode = null;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Invalid or expired coupon code.'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  height: 36,
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(AppShadows.radiusSm),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Apply',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
-        // Available Coupons Horizontal List (Screenshot 5 detail)
+        // Available Coupons Chips List
         couponsAsync.when(
           loading: () => const SizedBox.shrink(),
           error: (e, _) => const SizedBox.shrink(),
@@ -617,17 +676,17 @@ class _CartScreenState extends ConsumerState<CartScreen>
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 12),
-                const Text(
+                const SizedBox(height: 14),
+                Text(
                   'Available Coupons:',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: _textSecondary,
+                    fontWeight: FontWeight.bold,
+                    color: textSecondary,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 SizedBox(
                   height: 38,
                   child: ListView.builder(
@@ -638,21 +697,25 @@ class _CartScreenState extends ConsumerState<CartScreen>
                       final isApplied = _appliedCouponCode == coupon.name;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
-                        child: FilterChip(
+                        child: ChoiceChip(
                           selected: isApplied,
                           label: Text(
-                            '${coupon.name} (Flat ₹${coupon.price.toStringAsFixed(0)} off)',
+                            '${coupon.name} (₹${coupon.price.toStringAsFixed(0)} off)',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isApplied ? Colors.white : const Color(0xFFC62828),
+                              color: isApplied ? Colors.white : AppColors.primary,
                             ),
                           ),
-                          selectedColor: const Color(0xFFC62828),
-                          backgroundColor: const Color(0xFFFFEBEE),
-                          side: BorderSide(
-                            color: isApplied ? const Color(0xFFC62828) : const Color(0xFFFFCDD2),
+                          selectedColor: AppColors.primary,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
                           ),
                           onSelected: (selected) {
                             if (selected) {
@@ -665,7 +728,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
                                 SnackBar(
                                   content: Text('Coupon "${coupon.name}" applied! Flat ₹${coupon.price.toStringAsFixed(0)} discount.'),
                                   behavior: SnackBarBehavior.floating,
-                                  backgroundColor: Colors.green[700],
+                                  backgroundColor: AppColors.success,
                                 ),
                               );
                             } else {
@@ -686,64 +749,40 @@ class _CartScreenState extends ConsumerState<CartScreen>
           },
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
+        Divider(color: isDark ? AppColors.dividerDark : AppColors.dividerLight, height: 1),
+        const SizedBox(height: 14),
 
         // Price rows
-        _priceRow('Order Amount', '₹${orderAmount.toStringAsFixed(2)}'),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Text(
-              'Packing Charge',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: _textSecondary),
-            ),
-            const Spacer(),
-            Text(
-              '₹${packingCharge.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: _textPrimary),
-            ),
-          ],
-        ),
+        _priceRow(context, 'Order Amount', '₹${orderAmount.toStringAsFixed(2)}', isDark),
+        const SizedBox(height: 8),
+        _priceRow(context, 'Packing Charge', '₹${packingCharge.toStringAsFixed(2)}', isDark),
         if (discountAmount > 0) ...[
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text(
-                'Discount ($_appliedCouponCode)',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.green, fontWeight: FontWeight.w600),
-              ),
-              const Spacer(),
-              Text(
-                '-₹${discountAmount.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green),
-              ),
-            ],
-          ),
+          const SizedBox(height: 8),
+          _priceRow(context, 'Discount ($_appliedCouponCode)', '-₹${discountAmount.toStringAsFixed(2)}', isDark, isDiscount: true),
         ],
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
+        Divider(color: isDark ? AppColors.dividerDark : AppColors.dividerLight, height: 1),
+        const SizedBox(height: 14),
 
         // Total
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Total Payable',
-              style: TextStyle(
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontFamily: 'Poppins',
-                fontSize: 15,
                 fontWeight: FontWeight.bold,
-                color: _textPrimary,
+                color: textPrimary,
               ),
             ),
             Text(
               '₹${total.toStringAsFixed(2)}',
-              style: const TextStyle(
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: _red,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -752,115 +791,194 @@ class _CartScreenState extends ConsumerState<CartScreen>
     );
   }
 
-  Widget _priceRow(String label, String value) {
+  Widget _priceRow(BuildContext context, String label, String value, bool isDark, {bool isDiscount = false}) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 13, color: _textSecondary)),
-        Text(value,
-            style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: _textPrimary)),
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontFamily: 'Poppins',
+            color: isDiscount
+                ? AppColors.success
+                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            fontWeight: isDiscount ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontFamily: 'Poppins',
+            color: isDiscount
+                ? AppColors.success
+                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
 
-  // ─── Phone number (compact) ────────────────────────────────────────
-  Widget _buildPhoneSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Phone Number (Required)',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: _red,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _red, width: 1.2),
-          ),
-          child: TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 14, color: _textPrimary),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              hintText: 'Enter phone number',
-              hintStyle: TextStyle(
-                fontFamily: 'Poppins', fontSize: 13, color: _textSecondary),
+  // ─── Phone number Card ────────────────────────────────────────────
+  Widget _buildPhoneSection(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: AppShadows.borderRadiusLg,
+        boxShadow: AppShadows.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Delivery Phone Number',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Order type (compact toggles) ──────────────────────────────────
-  Widget _buildOrderTypeSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Order Type',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: _textPrimary,
+          const SizedBox(height: 12),
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight,
+              borderRadius: BorderRadius.circular(AppShadows.radiusMd),
+              border: Border.all(
+                color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Icon(
+                  Icons.phone_iphone_rounded,
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '+91 ',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Enter 10-digit number',
+                      hintStyle: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.normal,
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                      ),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: _orderTypeBtn('Dine In', Icons.restaurant_menu_outlined)),
-            const SizedBox(width: 10),
-            Expanded(child: _orderTypeBtn('Pack', Icons.takeout_dining_outlined)),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _orderTypeBtn(String type, IconData icon) {
-    final sel = _orderType == type;
+  // ─── Order type Card ──────────────────────────────────────────────
+  Widget _buildOrderTypeSection(BuildContext context, bool isDark) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: AppShadows.borderRadiusLg,
+        boxShadow: AppShadows.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Order Preference',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _orderTypeBtn(context, 'Dine In', Icons.restaurant_rounded, isDark)),
+              const SizedBox(width: 12),
+              Expanded(child: _orderTypeBtn(context, 'Pack', Icons.takeout_dining_rounded, isDark)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderTypeBtn(BuildContext context, String type, IconData icon, bool isDark) {
+    final isSelected = _orderType == type;
+
     return GestureDetector(
       onTap: () => setState(() => _orderType = type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected
+              ? AppColors.primary
+              : (isDark ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight),
+          borderRadius: BorderRadius.circular(AppShadows.radiusMd),
           border: Border.all(
-            color: sel ? _red : _yellow,
-            width: 1.5,
+            color: isSelected
+                ? AppColors.primary
+                : (isDark ? AppColors.dividerDark : AppColors.dividerLight),
+            width: 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: sel ? _red : _textSecondary, size: 18),
-            const SizedBox(width: 6),
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
             Text(
               type,
               style: TextStyle(
                 fontFamily: 'Poppins',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: sel ? _red : _textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
               ),
             ),
           ],
@@ -870,64 +988,69 @@ class _CartScreenState extends ConsumerState<CartScreen>
   }
 
   // ─── Sticky bottom bar ─────────────────────────────────────────────
-  Widget _buildBottomBar(bool isEmpty, double total) {
+  Widget _buildBottomBar(BuildContext context, bool isEmpty, double total, bool isDark) {
     return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
-        bottom: MediaQuery.of(context).padding.bottom + 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          topLeft: Radius.circular(AppShadows.radiusXl),
+          topRight: Radius.circular(AppShadows.radiusXl),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 16,
-            offset: const Offset(0, -3),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: SizedBox(
         width: double.infinity,
-        height: 52,
-        child: ElevatedButton(
-          onPressed: (isEmpty || _isOrdering) ? null : () => _placeOrder(total),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _yellow,
-            foregroundColor: _textPrimary,
-            disabledBackgroundColor: Colors.grey.shade200,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+        height: 50,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: (isEmpty || _isOrdering) ? null : AppColors.primaryGradient,
+            color: (isEmpty || _isOrdering) ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200) : null,
+            borderRadius: BorderRadius.circular(AppShadows.radiusMd),
+            boxShadow: (isEmpty || _isOrdering) ? null : AppShadows.primaryGlow,
           ),
-          child: _isOrdering
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: _textPrimary),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.shopping_cart_checkout_rounded, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Confirm Order',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+          child: ElevatedButton(
+            onPressed: (isEmpty || _isOrdering) ? null : () => _placeOrder(total),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              disabledForegroundColor: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppShadows.radiusMd),
+              ),
+            ),
+            child: _isOrdering
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: Colors.white),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.shopping_cart_checkout_rounded, size: 20, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text(
+                        'Confirm Order',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

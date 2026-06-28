@@ -123,9 +123,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // ── Categories ──────────────────────────────────────────
             Text('Categories', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
-            CategoryStrip(onCategoryTap: (category) {
-              context.push('/menu');
-            }),
+            ref.watch(canteenCategoriesProvider(canteen?.id ?? '')).when(
+              loading: () => const SizedBox(
+                height: 52,
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              ),
+              error: (e, _) => const SizedBox.shrink(),
+              data: (dbCategories) {
+                final List<CategoryItem> items = [
+                  const CategoryItem(emoji: '⭐', label: 'All', value: 'all'),
+                  ...dbCategories.map((c) {
+                    final name = c['name'] as String;
+                    String emoji = '🍲';
+                    final lower = name.toLowerCase();
+                    if (lower.contains('burger')) emoji = '🍔';
+                    else if (lower.contains('pizza')) emoji = '🍕';
+                    else if (lower.contains('beverage') || lower.contains('drink') || lower.contains('tea') || lower.contains('coffee')) emoji = '☕';
+                    else if (lower.contains('dessert') || lower.contains('cake') || lower.contains('sweet') || lower.contains('shake')) emoji = '🍰';
+                    else if (lower.contains('meal') || lower.contains('lunch') || lower.contains('dinner') || lower.contains('rice')) emoji = '🍛';
+                    else if (lower.contains('snack') || lower.contains('fries') || lower.contains('samosa') || lower.contains('patise')) emoji = '🍟';
+                    else if (lower.contains('combo')) emoji = '🎁';
+                    else if (lower.contains('roll')) emoji = '🌯';
+                    else if (lower.contains('momo')) emoji = '🥟';
+                    else if (lower.contains('chinese') || lower.contains('noodles') || lower.contains('maggi') || lower.contains('maggie') || lower.contains('pasta')) emoji = '🍜';
+                    
+                    return CategoryItem(
+                      emoji: emoji,
+                      label: name,
+                      value: c['id'] as String,
+                    );
+                  }),
+                ];
+
+                return CategoryStrip(
+                  categories: items,
+                  onCategoryTap: (categoryId) {
+                    context.push('/menu?category=$categoryId');
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 24),
 
             // ── Popular Items ───────────────────────────────────────

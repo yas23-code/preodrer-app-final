@@ -31,9 +31,18 @@ class AddMenuItemNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final storage = ref.read(storageServiceProvider);
-      final categoryService = ref.read(categoryProvider);
       final supabase = ref.read(supabaseClientProvider);
-      final canteenId = ref.read(selectedCanteenIdProvider);
+      
+      final canteen = await ref.read(vendorCanteenProvider.future);
+      final canteenId = canteen?['id'] as String?;
+      if (canteenId == null || canteenId.isEmpty) {
+        throw Exception("No canteen found for this vendor");
+      }
+
+      final categoryService = CategoryService(
+        supabase,
+        canteenId,
+      );
       final uuid = const Uuid();
 
       // 1. Upload Images (if any)

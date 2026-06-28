@@ -30,3 +30,41 @@ final currentCanteenProvider = Provider.autoDispose<Canteen?>((ref) {
     return null;
   }
 });
+
+final canteenActiveOrdersCountProvider = StreamProvider.family.autoDispose<int, String>((ref, canteenId) {
+  final supabase = ref.read(supabaseClientProvider);
+  if (canteenId.isEmpty) return Stream.value(0);
+
+  return supabase
+      .from('orders')
+      .stream(primaryKey: ['id'])
+      .eq('canteen_id', canteenId)
+      .map((data) {
+        return data.where((o) {
+          final status = o['status'] as String? ?? '';
+          return status != 'completed' &&
+                 status != 'delivered' &&
+                 status != 'declined' &&
+                 status != 'rejected' &&
+                 status != 'cancelled';
+        }).length;
+      });
+});
+
+final canteenMaxOrdersProvider = StreamProvider.family.autoDispose<int, String>((ref, canteenId) {
+  final supabase = ref.read(supabaseClientProvider);
+  if (canteenId.isEmpty) return Stream.value(10);
+
+  return supabase
+      .from('canteens')
+      .stream(primaryKey: ['id'])
+      .eq('id', canteenId)
+      .map((data) {
+        if (data.isEmpty) return 10;
+        try {
+          return data.first['max_concurrent_orders'] as int? ?? 10;
+        } catch (_) {
+          return 99999;
+        }
+      });
+});

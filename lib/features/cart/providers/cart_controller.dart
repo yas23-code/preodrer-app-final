@@ -9,6 +9,7 @@ import '../../menu/models/menu_item.dart';
 import '../models/cart_model.dart';
 import '../repositories/cart_repository.dart';
 import '../../orders/providers/orders_provider.dart';
+import '../../menu/providers/menu_provider.dart';
 
 final cartControllerProvider =
     AsyncNotifierProvider<CartController, CartState>(CartController.new);
@@ -268,12 +269,12 @@ class CartController extends AsyncNotifier<CartState> {
     if (currentCart == null || currentCart.lines.isEmpty) return;
 
     // ── CANTEEN ID RESOLUTION ──────────────────────────────────────────
-    // ALWAYS use kAcktronCanteenId for the order row. The item.canteenId
+    // ALWAYS use the selected canteen ID for the order row. The item.canteenId
     // field can carry a stale / wrong value (e.g. Gori Cafe 38a27df9-...)
     // if old cart_items or menu_items reference a different canteen.
     // This is the authoritative canteen for all customer orders in the
     // Acktron deployment.
-    const orderCanteenId = kAcktronCanteenId;
+    final orderCanteenId = ref.read(selectedCanteenIdProvider);
 
     // ── Debug diagnostics ──────────────────────────────────────────────
     for (final line in currentCart.lines.values) {
@@ -286,6 +287,39 @@ class CartController extends AsyncNotifier<CartState> {
 
     try {
       final supabase = ref.read(supabaseClientProvider);
+
+      // Check concurrent orders limit
+      final canteenRow = await supabase
+          .from('canteens')
+          .select('max_concurrent_orders')
+          .eq('id', orderCanteenId)
+          .maybeSingle();
+
+      if (canteenRow != null) {
+        int maxConcurrent = 99999;
+        try {
+          if (canteenRow['max_concurrent_orders'] != null) {
+            maxConcurrent = canteenRow['max_concurrent_orders'] as int;
+          }
+        } catch (_) {}
+
+        if (maxConcurrent < 99999) {
+          final activeCountRes = await supabase
+              .from('orders')
+              .select('id')
+              .eq('canteen_id', orderCanteenId)
+              .not('status', 'in', '("completed","delivered","declined","rejected","cancelled")');
+
+          final activeCount = activeCountRes.length;
+
+          if (activeCount >= maxConcurrent) {
+            throw Exception(
+              'The canteen is currently busy and has paused taking new orders. '
+              'Please try again in a few minutes when some orders are completed.',
+            );
+          }
+        }
+      }
 
       final orderAmount = currentCart.totalAmount;
       final packingCharge = currentCart.lines.values.fold(
