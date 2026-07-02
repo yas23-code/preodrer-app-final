@@ -67,7 +67,15 @@ class OrderDetailScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  OrderStatusBadge(status: status),
+                  Row(
+                    children: [
+                      OrderStatusBadge(status: status),
+                      if (status != 'completed' && status != 'delivered' && status != 'cancelled' && status != 'rejected') ...[
+                        const SizedBox(width: 8),
+                        _buildEtaBadge(orderData),
+                      ],
+                    ],
+                  ),
                   Text(
                     createdAt == null ? '—' : formatDate(createdAt),
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
@@ -241,6 +249,49 @@ class OrderDetailScreen extends ConsumerWidget {
         .maybeSingle();
 
     return response;
+  }
+
+  int _getEtaMinutes(Map<String, dynamic> order) {
+    final orderItems = order['order_items'] as List<dynamic>? ?? [];
+    int maxPrepTime = 10; // Default fallback
+    for (final item in orderItems) {
+      final menuItem = item['menu_items'] as Map<String, dynamic>?;
+      if (menuItem != null) {
+        final prep = menuItem['prep_time'] as int?;
+        if (prep != null && prep > maxPrepTime) {
+          maxPrepTime = prep;
+        }
+      }
+    }
+    return maxPrepTime;
+  }
+
+  Widget _buildEtaBadge(Map<String, dynamic> order) {
+    final eta = _getEtaMinutes(order);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFB74D).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, size: 13, color: Color(0xFFE65100)),
+          const SizedBox(width: 4),
+          Text(
+            'ETA: $eta mins',
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFE65100),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

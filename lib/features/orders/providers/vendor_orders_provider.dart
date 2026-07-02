@@ -242,6 +242,17 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         fallbackItemsStr.add('No items found');
       }
 
+      int maxPrepTime = 10;
+      for (final item in orderItemsData) {
+        final menuItem = item['menu_items'] as Map<String, dynamic>?;
+        if (menuItem != null) {
+          final prep = menuItem['prep_time'] as int?;
+          if (prep != null && prep > maxPrepTime) {
+            maxPrepTime = prep;
+          }
+        }
+      }
+
       // Transform status for UI Tabs
       String uiStatus = 'In Progress';
       if (status == 'ready') uiStatus = 'Ready';
@@ -252,7 +263,7 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         'customerName': customerName,
         'amount': formatCurrency(totalAmount.toDouble()),
         'time': timeStr,
-        'eta': 'Est. 10 mins',
+        'eta': '$maxPrepTime mins',
         'items': fallbackItemsStr.join(', '),
         'items_list': itemsList,
         'type': 'Takeaway',

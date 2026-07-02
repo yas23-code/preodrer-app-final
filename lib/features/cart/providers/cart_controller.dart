@@ -245,23 +245,36 @@ class CartController extends AsyncNotifier<CartState> {
     }
   }
 
-  Future<void> placeOrder({double? customTotal}) async {
+  Future<void> placeOrder({double? customTotal, String? phone}) async {
     final userId = _userId;
     if (userId == null) return;
 
+    final supabase = ref.read(supabaseClientProvider);
+
+    // If phone is provided, update the profile first
+    if (phone != null && phone.trim().isNotEmpty) {
+      try {
+        await supabase
+            .from(kProfilesTableName)
+            .update({'phone': phone.trim()})
+            .eq('id', userId);
+      } catch (e) {
+        debugPrint('[CartController] Failed to update phone in profile: $e');
+      }
+    }
+
     // ── Phone number validation (fresh DB query) ──────────────────────
-    final supabaseForCheck = ref.read(supabaseClientProvider);
-    final profileRow = await supabaseForCheck
+    final profileRow = await supabase
         .from(kProfilesTableName)
         .select('phone')
         .eq('id', userId)
         .maybeSingle();
-    final phone = profileRow?['phone']?.toString().trim();
-    debugPrint('[CartController] placeOrder -> phone check: "$phone"');
-    if (phone == null || phone.isEmpty) {
+    final dbPhone = profileRow?['phone']?.toString().trim();
+    debugPrint('[CartController] placeOrder -> phone check: "$dbPhone"');
+    if (dbPhone == null || dbPhone.isEmpty) {
       throw Exception(
         'Phone number is required.\n'
-        'Go to Profile → Edit Profile and add your phone number before ordering.',
+        'Please enter a valid phone number before confirming.',
       );
     }
 

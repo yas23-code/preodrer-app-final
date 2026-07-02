@@ -72,7 +72,10 @@ class _CartScreenState extends ConsumerState<CartScreen>
   Future<void> _placeOrder(double total) async {
     setState(() => _isOrdering = true);
     try {
-      await ref.read(cartControllerProvider.notifier).placeOrder(customTotal: total);
+      await ref.read(cartControllerProvider.notifier).placeOrder(
+            customTotal: total,
+            phone: _phoneController.text.trim(),
+          );
       if (!mounted) return;
       setState(() {
         _isOrdering = false;
