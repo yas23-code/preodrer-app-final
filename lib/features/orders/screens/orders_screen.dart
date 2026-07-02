@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -125,6 +126,32 @@ class OrdersScreen extends ConsumerWidget {
     final createdAt =
         rawCreatedAt != null ? DateTime.tryParse(rawCreatedAt)?.toLocal() : null;
 
+    final rawScheduledTime = order['scheduled_time'] as String?;
+    DateTime? scheduledTime =
+        rawScheduledTime != null ? DateTime.tryParse(rawScheduledTime)?.toLocal() : null;
+        
+    // Compute ETA from order items prep times + created_at
+    if (scheduledTime == null && createdAt != null) {
+      // Parse items relations
+      final orderItemsForEta = order['order_items'] as List<dynamic>? ?? [];
+      int? maxPrepTime;
+      for (final item in orderItemsForEta) {
+        if (item['menu_items'] != null) {
+          final prepTime = item['menu_items']['prep_time'] as int?;
+          if (prepTime != null) {
+            final qty = item['quantity'] as int? ?? 1;
+            final total = prepTime * qty;
+            if (maxPrepTime == null || total > maxPrepTime) maxPrepTime = total;
+          }
+        }
+      }
+      // Include queue penalty: active_orders × 2 (subtract 1 since current order is included)
+      final activeOrders = order['_active_orders_count'] as int? ?? 0;
+      final ordersAhead = activeOrders > 1 ? activeOrders - 1 : 0;
+      final totalMinutes = (maxPrepTime ?? 10) + (ordersAhead * 2);
+      scheduledTime = createdAt.add(Duration(minutes: totalMinutes));
+    }
+
     // Parse Canteen relations
     final canteen = order['canteens'] as Map<String, dynamic>?;
     final canteenName =
@@ -195,6 +222,7 @@ class OrdersScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
 
+<<<<<<< HEAD
                 // ── STATUS CAPSULE BADGE + ETA BADGE ──────────────────────
                 Row(
                   children: [
@@ -203,6 +231,17 @@ class OrdersScreen extends ConsumerWidget {
                       const SizedBox(width: 10),
                       _buildEtaBadge(order),
                     ],
+=======
+                // ── STATUS CAPSULE BADGE & ETA ────────────────────────────
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _buildStatusCapsule(status),
+                    if (scheduledTime != null)
+                      _LiveEtaBadge(scheduledTime: scheduledTime, status: status),
+>>>>>>> 9f27df4 (student ui update)
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -624,5 +663,74 @@ class OrdersScreen extends ConsumerWidget {
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     return '$hour:${dt.minute.toString().padLeft(2, '0')} $period';
+  }
+}
+
+class _LiveEtaBadge extends StatefulWidget {
+  final DateTime scheduledTime;
+  final String status;
+
+  const _LiveEtaBadge({required this.scheduledTime, required this.status});
+
+  @override
+  State<_LiveEtaBadge> createState() => _LiveEtaBadgeState();
+}
+
+class _LiveEtaBadgeState extends State<_LiveEtaBadge> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only hide for terminal statuses
+    if (widget.status == 'completed' ||
+        widget.status == 'delivered' ||
+        widget.status == 'declined' ||
+        widget.status == 'rejected' ||
+        widget.status == 'cancelled' ||
+        widget.status == 'ready') {
+      return const SizedBox.shrink();
+    }
+
+    final now = DateTime.now();
+    final remaining = widget.scheduledTime.difference(now).inMinutes;
+    final text = remaining > 0 ? 'Ready in $remaining min' : 'Ready soon';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE53935).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.access_time_rounded, color: Color(0xFFE53935), size: 14),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFE53935),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -220,7 +220,16 @@ class _CartScreenState extends ConsumerState<CartScreen>
                             physics: const BouncingScrollPhysics(),
                             children: [
                               // Canteen + ETA Card
-                              _buildCanteenHeader(context, currentCanteen?.name ?? 'Canteen', isDark),
+                              _buildCanteenHeader(
+                                context,
+                                currentCanteen?.name ?? 'Canteen',
+                                isDark,
+                                cart.lines.values
+                                    .where((l) => l.item.prepTime != null)
+                                    .map((l) => l.item.prepTime! * l.quantity)
+                                    .fold<int?>(null, (max, t) => max == null || t > max ? t : max),
+                                ref.watch(canteenActiveOrdersCountProvider(canteenId)).value ?? 0,
+                              ),
                               const SizedBox(height: 16),
 
                               // Cart items Card container
@@ -350,8 +359,12 @@ class _CartScreenState extends ConsumerState<CartScreen>
   }
 
   // ─── Canteen + ETA Card ────────────────────────────────────────────
-  Widget _buildCanteenHeader(BuildContext context, String canteenName, bool isDark) {
+  Widget _buildCanteenHeader(BuildContext context, String canteenName, bool isDark, int? maxPrepTime, int activeOrders) {
     final theme = Theme.of(context);
+    
+    // Formula: ready_in = max_prep_time + active_orders × 2
+    final readyInMinutes = (maxPrepTime ?? 10) + (activeOrders * 2);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -403,12 +416,12 @@ class _CartScreenState extends ConsumerState<CartScreen>
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.access_time_rounded, color: AppColors.primary, size: 16),
-                SizedBox(width: 6),
+              children: [
+                const Icon(Icons.access_time_rounded, color: AppColors.primary, size: 16),
+                const SizedBox(width: 6),
                 Text(
-                  '~30 min',
-                  style: TextStyle(
+                  'Ready in $readyInMinutes min',
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

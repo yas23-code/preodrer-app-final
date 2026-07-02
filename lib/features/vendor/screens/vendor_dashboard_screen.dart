@@ -1785,15 +1785,10 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
                   children: [
                     Text('Placed ${order['time']}', style: const TextStyle(color: Color(0xFF8D7F70), fontSize: 10)),
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time, size: 12, color: Color(0xFFDA291C)),
-                        const SizedBox(width: 4),
-                        Text(
-                          order['eta'],
-                          style: const TextStyle(color: Color(0xFFDA291C), fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ],
+                    _VendorLiveEtaBadge(
+                      scheduledTimeStr: order['eta_scheduled_time'] as String?,
+                      fallbackEta: order['eta'] as String? ?? '',
+                      rawStatus: order['raw_status'] as String? ?? '',
                     ),
                   ],
                 ),
@@ -1992,5 +1987,79 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
         ),
       );
     }
+  }
+}
+
+class _VendorLiveEtaBadge extends StatefulWidget {
+  final String? scheduledTimeStr;
+  final String fallbackEta;
+  final String rawStatus;
+
+  const _VendorLiveEtaBadge({
+    required this.scheduledTimeStr,
+    required this.fallbackEta,
+    required this.rawStatus,
+  });
+
+  @override
+  State<_VendorLiveEtaBadge> createState() => _VendorLiveEtaBadgeState();
+}
+
+class _VendorLiveEtaBadgeState extends State<_VendorLiveEtaBadge> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // For completed/declined statuses, don't show countdown
+    if (widget.rawStatus == 'completed' ||
+        widget.rawStatus == 'delivered' ||
+        widget.rawStatus == 'declined' ||
+        widget.rawStatus == 'rejected' ||
+        widget.rawStatus == 'cancelled') {
+      return const SizedBox.shrink();
+    }
+
+    String displayText;
+    if (widget.scheduledTimeStr != null) {
+      final scheduledTime = DateTime.tryParse(widget.scheduledTimeStr!)?.toLocal();
+      if (scheduledTime != null) {
+        final remaining = scheduledTime.difference(DateTime.now()).inMinutes;
+        displayText = remaining > 0 ? 'Est. $remaining mins' : 'Ready soon';
+      } else {
+        displayText = widget.fallbackEta;
+      }
+    } else {
+      displayText = widget.fallbackEta;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.access_time, size: 12, color: Color(0xFFDA291C)),
+        const SizedBox(width: 4),
+        Text(
+          displayText,
+          style: const TextStyle(
+            color: Color(0xFFDA291C),
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
   }
 }

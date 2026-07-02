@@ -87,6 +87,39 @@ class OrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         .order('created_at', ascending: false);
 
     final data = response as List<dynamic>;
-    return data.cast<Map<String, dynamic>>();
+    final orders = data.cast<Map<String, dynamic>>();
+
+    // Collect unique canteen IDs from non-completed orders
+    final activeStatuses = ['pending', 'accepted', 'preparing', 'ready'];
+    final canteenIdsToFetch = orders
+        .where((o) => activeStatuses.contains((o['status'] as String? ?? '').toLowerCase()))
+        .map((o) => o['canteen_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    // For each canteen, fetch active order count (orders ahead = total active - 1 for this order)
+    final activeCountByCanteen = <String, int>{};
+    for (final canteenId in canteenIdsToFetch) {
+      try {
+        final countRes = await supabase
+            .from(kOrdersTableName)
+            .select('id')
+            .eq('canteen_id', canteenId)
+            .not('status', 'in', '(completed,delivered,declined,rejected,cancelled)');
+        activeCountByCanteen[canteenId] = (countRes as List).length;
+      } catch (_) {
+        activeCountByCanteen[canteenId] = 0;
+      }
+    }
+
+    // Embed active count in each order map for ETA calculation on the UI
+    return orders.map((order) {
+      final canteenId = order['canteen_id']?.toString() ?? '';
+      final activeCount = activeCountByCanteen[canteenId] ?? 0;
+      return {
+        ...order,
+        '_active_orders_count': activeCount,
+      };
+    }).toList();
   }
 }

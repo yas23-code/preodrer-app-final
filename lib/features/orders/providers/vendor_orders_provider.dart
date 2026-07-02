@@ -185,6 +185,16 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
   }
 
   List<Map<String, dynamic>> _mapOrdersToUi(List<dynamic> data) {
+    // Count active orders per canteen
+    final activeOrdersCountByCanteen = <String, int>{};
+    for (final row in data) {
+      final status = row['status'] as String? ?? '';
+      if (status != 'completed' && status != 'delivered' && status != 'declined' && status != 'rejected' && status != 'cancelled') {
+        final canteenId = row['canteen_id']?.toString() ?? '';
+        activeOrdersCountByCanteen[canteenId] = (activeOrdersCountByCanteen[canteenId] ?? 0) + 1;
+      }
+    }
+
     return data.map((row) {
       final id = row['id'] as String;
       final status = row['status'] as String? ?? 'pending';
@@ -258,12 +268,58 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
       if (status == 'ready') uiStatus = 'Ready';
       if (status == 'completed' || status == 'declined' || status == 'rejected' || status == 'cancelled') uiStatus = 'Completed';
 
+      // Calculate max prep time
+      int? maxPrepTime;
+      if (orderItemsData.isNotEmpty) {
+        for (final item in orderItemsData) {
+          if (item['menu_items'] != null) {
+            final prepTime = item['menu_items']['prep_time'] as int?;
+            if (prepTime != null) {
+              final quantity = item['quantity'] as int? ?? 1;
+              final totalItemPrepTime = prepTime * quantity;
+              if (maxPrepTime == null || totalItemPrepTime > maxPrepTime) {
+                maxPrepTime = totalItemPrepTime;
+              }
+            }
+          }
+        }
+      }
+
+      final canteenId = row['canteen_id']?.toString() ?? '';
+      // Don't count the current order itself if it's the only one being considered?
+      // Wait, in student dashboard `canteenActiveOrdersCountProvider` returns all active orders.
+      // At the time of cart, there are N active orders. Once placed, there are N+1 active orders.
+      // So the ETA for this order becomes (maxPrepTime + (N * 2)). 
+      // But we are computing it dynamically here. The student saw (N*2), vendor should ideally see (N*2).
+      // Since it's in the queue now, `activeOrdersCountByCanteen` includes this order. 
+      // To match the student's ETA, we should subtract 1 (or just calculate correctly).
+      // Actually, if we just want it to be accurate to what student sees, the student saw N active orders.
+      // Let's just use the current active orders. If it's a bit higher, that's fine.
+      final activeOrders = activeOrdersCountByCanteen[canteenId] ?? 0;
+      final ordersAhead = (activeOrders > 0) ? activeOrders - 1 : 0;
+      final readyInMinutes = (maxPrepTime ?? 10) + (ordersAhead * 2);
+      final etaStr = 'Est. $readyInMinutes mins';
+
+      // Compute scheduled_time for live countdown on vendor dashboard
+      DateTime? scheduledTime;
+      if (createdAtStr != null) {
+        final createdAtDt = DateTime.tryParse(createdAtStr)?.toLocal();
+        if (createdAtDt != null) {
+          scheduledTime = createdAtDt.add(Duration(minutes: readyInMinutes));
+        }
+      }
+
       return {
         'id': id,
         'customerName': customerName,
         'amount': formatCurrency(totalAmount.toDouble()),
         'time': timeStr,
+<<<<<<< HEAD
         'eta': '$maxPrepTime mins',
+=======
+        'eta': etaStr,
+        'eta_scheduled_time': scheduledTime?.toIso8601String(),
+>>>>>>> 9f27df4 (student ui update)
         'items': fallbackItemsStr.join(', '),
         'items_list': itemsList,
         'type': 'Takeaway',

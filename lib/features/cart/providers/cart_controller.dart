@@ -308,6 +308,8 @@ class CartController extends AsyncNotifier<CartState> {
           .eq('id', orderCanteenId)
           .maybeSingle();
 
+      DateTime? scheduledTime;
+
       if (canteenRow != null) {
         int maxConcurrent = 99999;
         try {
@@ -316,15 +318,15 @@ class CartController extends AsyncNotifier<CartState> {
           }
         } catch (_) {}
 
+        // We need activeCount for both concurrency check and ETA calculation
+        final activeCountRes = await supabase
+            .from('orders')
+            .select('id')
+            .eq('canteen_id', orderCanteenId)
+            .not('status', 'in', '("completed","delivered","declined","rejected","cancelled")');
+        final activeCount = activeCountRes.length;
+
         if (maxConcurrent < 99999) {
-          final activeCountRes = await supabase
-              .from('orders')
-              .select('id')
-              .eq('canteen_id', orderCanteenId)
-              .not('status', 'in', '("completed","delivered","declined","rejected","cancelled")');
-
-          final activeCount = activeCountRes.length;
-
           if (activeCount >= maxConcurrent) {
             throw Exception(
               'The canteen is currently busy and has paused taking new orders. '
@@ -332,6 +334,20 @@ class CartController extends AsyncNotifier<CartState> {
             );
           }
         }
+
+        // Calculate ETA
+        int? maxPrepTime;
+        for (final line in currentCart.lines.values) {
+          if (line.item.prepTime != null) {
+            final totalItemPrepTime = line.item.prepTime! * line.quantity;
+            if (maxPrepTime == null || totalItemPrepTime > maxPrepTime) {
+              maxPrepTime = totalItemPrepTime;
+            }
+          }
+        }
+        
+        final readyInMinutes = (maxPrepTime ?? 10) + (activeCount * 2);
+        scheduledTime = DateTime.now().add(Duration(minutes: readyInMinutes));
       }
 
       final orderAmount = currentCart.totalAmount;
@@ -342,7 +358,7 @@ class CartController extends AsyncNotifier<CartState> {
       final totalWithCharges = orderAmount + packingCharge;
 
       // 1. Insert order — always Acktron canteen
-      final orderPayload = {
+      final orderPayload = <String, dynamic>{
         'student_id': userId,
         'canteen_id': orderCanteenId,
         'status': 'pending',
