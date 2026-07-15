@@ -251,18 +251,6 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         });
         fallbackItemsStr.add('No items found');
       }
-
-      int maxPrepTime = 10;
-      for (final item in orderItemsData) {
-        final menuItem = item['menu_items'] as Map<String, dynamic>?;
-        if (menuItem != null) {
-          final prep = menuItem['prep_time'] as int?;
-          if (prep != null && prep > maxPrepTime) {
-            maxPrepTime = prep;
-          }
-        }
-      }
-
       // Transform status for UI Tabs
       String uiStatus = 'In Progress';
       if (status == 'ready') uiStatus = 'Ready';
@@ -297,15 +285,20 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
       // Let's just use the current active orders. If it's a bit higher, that's fine.
       final activeOrders = activeOrdersCountByCanteen[canteenId] ?? 0;
       final ordersAhead = (activeOrders > 0) ? activeOrders - 1 : 0;
-      final readyInMinutes = (maxPrepTime ?? 10) + (ordersAhead * 2);
-      final etaStr = 'Est. $readyInMinutes mins';
-
-      // Compute scheduled_time for live countdown on vendor dashboard
+      
+      String? etaStr;
       DateTime? scheduledTime;
-      if (createdAtStr != null) {
-        final createdAtDt = DateTime.tryParse(createdAtStr)?.toLocal();
-        if (createdAtDt != null) {
-          scheduledTime = createdAtDt.add(Duration(minutes: readyInMinutes));
+      
+      if (maxPrepTime != null) {
+        final readyInMinutes = maxPrepTime + (ordersAhead * 2);
+        etaStr = 'Est. $readyInMinutes mins';
+        
+        // Compute scheduled_time for live countdown on vendor dashboard
+        if (createdAtStr != null) {
+          final createdAtDt = DateTime.tryParse(createdAtStr)?.toLocal();
+          if (createdAtDt != null) {
+            scheduledTime = createdAtDt.add(Duration(minutes: readyInMinutes));
+          }
         }
       }
 
@@ -314,12 +307,8 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
         'customerName': customerName,
         'amount': formatCurrency(totalAmount.toDouble()),
         'time': timeStr,
-<<<<<<< HEAD
-        'eta': '$maxPrepTime mins',
-=======
         'eta': etaStr,
         'eta_scheduled_time': scheduledTime?.toIso8601String(),
->>>>>>> 9f27df4 (student ui update)
         'items': fallbackItemsStr.join(', '),
         'items_list': itemsList,
         'type': 'Takeaway',

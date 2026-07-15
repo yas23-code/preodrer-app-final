@@ -87,8 +87,8 @@ class CanteenApprovalsNotifier extends Notifier<CanteenApprovalsState> {
     state = state.copyWith(dateFilter: filter);
   }
 
-  // Action: Approve Canteen
-  Future<bool> approveCanteen(Map<String, dynamic> reg) async {
+  // Action: Approve Canteen — returns null on success, or an error message on failure
+  Future<String?> approveCanteen(Map<String, dynamic> reg) async {
     final supabase = ref.read(supabaseClientProvider);
     final userId = reg['user_id'] as String?;
     final canteenName = reg['canteen_name'] as String;
@@ -97,42 +97,81 @@ class CanteenApprovalsNotifier extends Notifier<CanteenApprovalsState> {
 
     if (userId == null || userId.isEmpty) {
       debugPrint('[APPROVE_CANTEEN_ERROR] Cannot approve a registration without a valid user ID.');
-      return false;
+      return 'Registration has no valid user ID';
     }
+
+    debugPrint('[APPROVE_CANTEEN] Starting approval for regId=$regId userId=$userId canteen=$canteenName');
 
     try {
       // 1. Assign Vendor role in user_roles
-      await supabase.from('user_roles').upsert({
-        'user_id': userId,
-        'role': 'vendor',
-      }, onConflict: 'user_id');
+      debugPrint('[APPROVE_CANTEEN] Step 1: Upserting vendor role in user_roles...');
+      try {
+        await supabase.from('user_roles').upsert({
+          'user_id': userId,
+          'role': 'vendor',
+        }, onConflict: 'user_id');
+        debugPrint('[APPROVE_CANTEEN] Step 1: ✓ user_roles upsert succeeded');
+      } catch (e) {
+        // user_roles upsert can fail if there's no unique constraint on user_id
+        // or if RLS blocks it. Try a plain insert as fallback.
+        debugPrint('[APPROVE_CANTEEN] Step 1: upsert failed ($e), trying insert...');
+        try {
+          await supabase.from('user_roles').insert({
+            'user_id': userId,
+            'role': 'vendor',
+          });
+          debugPrint('[APPROVE_CANTEEN] Step 1: ✓ user_roles insert succeeded');
+        } catch (e2) {
+          debugPrint('[APPROVE_CANTEEN] Step 1: ⚠ user_roles insert also failed ($e2), continuing...');
+          // Continue — the role may already exist
+        }
+      }
 
       // 2. Also update profiles role column
+      debugPrint('[APPROVE_CANTEEN] Step 2: Updating profiles role...');
       try {
         await supabase.from('profiles').update({
           'role': 'vendor',
         }).eq('id', userId);
-      } catch (_) {}
+        debugPrint('[APPROVE_CANTEEN] Step 2: ✓ profiles update succeeded');
+      } catch (e) {
+        debugPrint('[APPROVE_CANTEEN] Step 2: ⚠ profiles update failed ($e), continuing...');
+      }
 
       // 3. Create Canteen account
-      await supabase.from('canteens').insert({
-        'name': canteenName,
-        'location': location,
-        'vendor_id': userId,
-        'is_open': true,
-      });
+      debugPrint('[APPROVE_CANTEEN] Step 3: Creating canteen entry...');
+      try {
+        await supabase.from('canteens').insert({
+          'name': canteenName,
+          'location': location,
+          'vendor_id': userId,
+          'is_open': true,
+        });
+        debugPrint('[APPROVE_CANTEEN] Step 3: ✓ canteen created');
+      } catch (e) {
+        debugPrint('[APPROVE_CANTEEN] Step 3: ⚠ canteen insert failed ($e)');
+        // If canteen already exists for this vendor, try to continue
+        if (e.toString().contains('duplicate') || e.toString().contains('unique')) {
+          debugPrint('[APPROVE_CANTEEN] Step 3: Canteen may already exist, continuing...');
+        } else {
+          return 'Step 3 failed: Could not create canteen — $e';
+        }
+      }
 
       // 4. Update status in canteen_registrations to approved
+      debugPrint('[APPROVE_CANTEEN] Step 4: Updating registration status to approved...');
       await supabase.from('canteen_registrations').update({
         'status': 'approved',
       }).eq('id', regId);
+      debugPrint('[APPROVE_CANTEEN] Step 4: ✓ registration status updated');
 
       // Refresh list
       await fetchRegistrations();
-      return true;
+      debugPrint('[APPROVE_CANTEEN] ✓ Approval completed successfully');
+      return null; // success
     } catch (e, stack) {
       debugPrint('[APPROVE_CANTEEN_ERROR] Failed to approve canteen: $e\n$stack');
-      return false;
+      return e.toString();
     }
   }
 

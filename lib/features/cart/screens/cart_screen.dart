@@ -363,7 +363,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
     final theme = Theme.of(context);
     
     // Formula: ready_in = max_prep_time + active_orders × 2
-    final readyInMinutes = (maxPrepTime ?? 10) + (activeOrders * 2);
+    final readyInMinutes = maxPrepTime != null ? maxPrepTime + (activeOrders * 2) : 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -406,31 +406,32 @@ class _CartScreenState extends ConsumerState<CartScreen>
               ],
             ),
           ),
-          // ETA badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: AppShadows.borderRadiusMd,
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.access_time_rounded, color: AppColors.primary, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  'Ready in $readyInMinutes min',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+          // ETA badge (Only show if maxPrepTime is not null)
+          if (maxPrepTime != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: AppShadows.borderRadiusMd,
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.access_time_rounded, color: AppColors.primary, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Ready in $readyInMinutes min',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

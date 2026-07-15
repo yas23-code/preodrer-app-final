@@ -1,3 +1,8 @@
+# Signing secrets — never commit these
+android/key.properties
+*.jks
+*.keystore
+
 # Miscellaneous
 *.class
 *.lock

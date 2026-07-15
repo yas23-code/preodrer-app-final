@@ -145,11 +145,13 @@ class OrdersScreen extends ConsumerWidget {
           }
         }
       }
-      // Include queue penalty: active_orders × 2 (subtract 1 since current order is included)
-      final activeOrders = order['_active_orders_count'] as int? ?? 0;
-      final ordersAhead = activeOrders > 1 ? activeOrders - 1 : 0;
-      final totalMinutes = (maxPrepTime ?? 10) + (ordersAhead * 2);
-      scheduledTime = createdAt.add(Duration(minutes: totalMinutes));
+      if (maxPrepTime != null) {
+        // Include queue penalty: active_orders × 2 (subtract 1 since current order is included)
+        final activeOrders = order['_active_orders_count'] as int? ?? 0;
+        final ordersAhead = activeOrders > 1 ? activeOrders - 1 : 0;
+        final totalMinutes = maxPrepTime + (ordersAhead * 2);
+        scheduledTime = createdAt.add(Duration(minutes: totalMinutes));
+      }
     }
 
     // Parse Canteen relations
@@ -221,17 +223,6 @@ class OrdersScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-
-<<<<<<< HEAD
-                // ── STATUS CAPSULE BADGE + ETA BADGE ──────────────────────
-                Row(
-                  children: [
-                    _buildStatusCapsule(status),
-                    if (status != 'completed' && status != 'delivered' && status != 'cancelled' && status != 'rejected') ...[
-                      const SizedBox(width: 10),
-                      _buildEtaBadge(order),
-                    ],
-=======
                 // ── STATUS CAPSULE BADGE & ETA ────────────────────────────
                 Wrap(
                   spacing: 8,
@@ -241,7 +232,6 @@ class OrdersScreen extends ConsumerWidget {
                     _buildStatusCapsule(status),
                     if (scheduledTime != null)
                       _LiveEtaBadge(scheduledTime: scheduledTime, status: status),
->>>>>>> 9f27df4 (student ui update)
                   ],
                 ),
                 const SizedBox(height: 12),

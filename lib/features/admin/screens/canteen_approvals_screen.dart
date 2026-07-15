@@ -505,12 +505,13 @@ class _CanteenApprovalsTabState extends ConsumerState<_CanteenApprovalsTab> {
       ),
     );
     if (confirmed == true) {
-      final success = await ref.read(canteenApprovalsProvider.notifier).approveCanteen(reg);
+      final error = await ref.read(canteenApprovalsProvider.notifier).approveCanteen(reg);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success ? 'Canteen approved!' : 'Failed to approve.'),
-          backgroundColor: success ? Colors.green : const Color(0xFFDA291C),
+          content: Text(error == null ? 'Canteen approved!' : 'Failed to approve: $error'),
+          backgroundColor: error == null ? Colors.green : const Color(0xFFDA291C),
+          duration: Duration(seconds: error == null ? 2 : 5),
         ),
       );
     }

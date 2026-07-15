@@ -2033,8 +2033,14 @@ class _VendorLiveEtaBadgeState extends State<_VendorLiveEtaBadge> {
       return const SizedBox.shrink();
     }
 
+    // If no preparation time is set, scheduledTimeStr and fallbackEta are null/empty
+    if ((widget.scheduledTimeStr == null || widget.scheduledTimeStr!.isEmpty) &&
+        widget.fallbackEta.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     String displayText;
-    if (widget.scheduledTimeStr != null) {
+    if (widget.scheduledTimeStr != null && widget.scheduledTimeStr!.isNotEmpty) {
       final scheduledTime = DateTime.tryParse(widget.scheduledTimeStr!)?.toLocal();
       if (scheduledTime != null) {
         final remaining = scheduledTime.difference(DateTime.now()).inMinutes;
@@ -2044,6 +2050,10 @@ class _VendorLiveEtaBadgeState extends State<_VendorLiveEtaBadge> {
       }
     } else {
       displayText = widget.fallbackEta;
+    }
+
+    if (displayText.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     return Row(
