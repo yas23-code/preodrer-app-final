@@ -69,7 +69,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     setState(() => _isProcessing = true);
     try {
-      await ref.read(cartControllerProvider.notifier).placeOrder();
+      final session = await ref.read(cartControllerProvider.notifier).initiatePayment(total: 0.0, phone: '');
       if (!mounted) return;
 
       await showDialog(

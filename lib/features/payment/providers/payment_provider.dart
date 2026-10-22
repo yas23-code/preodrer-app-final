@@ -7,13 +7,17 @@ final paymentControllerProvider = Provider<PaymentController>((ref) {
   return PaymentController(ref);
 });
 
-class CashfreeOrderInit {
-  final String orderId;
-  final String paymentLink;
+/// Data returned by [PaymentController.createCashfreeSession] after the
+/// Supabase edge function creates the order on Cashfree's server.
+class CashfreeSessionData {
+  final String appOrderId;       // Our own UUID from `orders` table
+  final String cfOrderId;        // Cashfree's cf_order_id
+  final String paymentSessionId; // Used to open the Cashfree SDK payment sheet
 
-  const CashfreeOrderInit({
-    required this.orderId,
-    required this.paymentLink,
+  const CashfreeSessionData({
+    required this.appOrderId,
+    required this.cfOrderId,
+    required this.paymentSessionId,
   });
 }
 
@@ -22,49 +26,82 @@ class PaymentController {
 
   PaymentController(this.ref);
 
-  Future<CashfreeOrderInit> createCashfreeOrder({
+  /// Calls the `create-cashfree-order` Supabase Edge Function.
+  ///
+  /// The edge function:
+  ///   1. Calls Cashfree API to create an order
+  ///   2. Updates `orders.cashfree_order_id` and `orders.payment_session_id`
+  ///   3. Returns `{ cf_order_id, payment_session_id }`
+  Future<CashfreeSessionData> createCashfreeSession({
+    required String appOrderId,
     required double amount,
-    required int itemCount,
+    required String customerPhone,
+    String? customerEmail,
+    String? customerName,
+    String? customerId,
   }) async {
     final supabase = ref.read(supabaseClientProvider);
 
     final response = await supabase.functions.invoke(
       kCreateCashfreeOrderFunction,
       body: {
-        // TODO: fill these request fields with whatever your Edge Function expects.
+        'app_order_id': appOrderId,
         'amount': amount,
-        'item_count': itemCount,
+        'customer_id': customerId ?? 'guest',
+        'customer_phone': customerPhone,
+        'customer_email': customerEmail ?? 'customer@preorder.app',
+        'customer_name': customerName ?? 'Student',
       },
     );
 
+    if (response.status != 200) {
+      throw Exception(
+        'Failed to create Cashfree session (HTTP ${response.status}): ${response.data}',
+      );
+    }
+
     final data = response.data as Map<String, dynamic>;
 
-    // TODO: map these keys to your Edge Function response schema.
-    final orderId = data['order_id'] as String;
-    final paymentLink = data['payment_link'] as String;
+    final cfOrderId = data['cf_order_id']?.toString();
+    final paymentSessionId = data['payment_session_id']?.toString();
 
-    return CashfreeOrderInit(orderId: orderId, paymentLink: paymentLink);
+    if (cfOrderId == null || paymentSessionId == null) {
+      throw Exception(
+        'Invalid response from payment server: $data',
+      );
+    }
+
+    return CashfreeSessionData(
+      appOrderId: appOrderId,
+      cfOrderId: cfOrderId,
+      paymentSessionId: paymentSessionId,
+    );
   }
 
+  /// Calls the `verify-cashfree-payment` Supabase Edge Function.
+  ///
+  /// Returns `true` if payment is confirmed as PAID.
   Future<bool> verifyCashfreePayment({
-    required String orderId,
-    required Map<String, String> redirectQueryParams,
+    required String appOrderId,
+    required String cfOrderId,
   }) async {
     final supabase = ref.read(supabaseClientProvider);
 
     final response = await supabase.functions.invoke(
       kVerifyCashfreePaymentFunction,
       body: {
-        'order_id': orderId,
-        // TODO: send only the params your Edge Function expects.
-        ...redirectQueryParams,
+        'app_order_id': appOrderId,
+        'cf_order_id': cfOrderId,
       },
     );
 
-    final data = response.data as Map<String, dynamic>;
+    if (response.status != 200) {
+      throw Exception(
+        'Payment verification failed (HTTP ${response.status}): ${response.data}',
+      );
+    }
 
-    // TODO: map to your verify function response schema.
-    return (data['success'] as bool?) ?? (data['verified'] as bool? ?? false);
+    final data = response.data as Map<String, dynamic>;
+    return (data['success'] as bool?) ?? false;
   }
 }
-

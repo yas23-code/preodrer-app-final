@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -177,6 +178,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _friendlyError(Object e) {
     final msg = e.toString();
+    developer.log('Auth error: $msg', name: 'LoginScreen');
     if (msg.contains('Invalid login credentials')) {
       return 'Incorrect email or password.';
     }
@@ -186,6 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (msg.contains('Email not confirmed')) {
       return 'Please verify your email before logging in.';
     }
+    // Show the actual error for debugging instead of generic message
     if (msg.contains('network') || msg.contains('SocketException')) {
       return 'Network error. Please check your connection.';
     }

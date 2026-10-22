@@ -10,6 +10,7 @@ import '../models/cart_model.dart';
 import '../repositories/cart_repository.dart';
 import '../../orders/providers/orders_provider.dart';
 import '../../menu/providers/menu_provider.dart';
+import '../../payment/providers/payment_provider.dart';
 
 final cartControllerProvider =
     AsyncNotifierProvider<CartController, CartState>(CartController.new);
@@ -245,14 +246,106 @@ class CartController extends AsyncNotifier<CartState> {
     }
   }
 
-  Future<void> placeOrder({double? customTotal, String? phone}) async {
+  // ── Private: create the order row in DB + insert order items ─────────
+  // Returns the new order's UUID.
+  Future<String> _createOrder({required double customTotal, required String userId, required String phone}) async {
+    final supabase = ref.read(supabaseClientProvider);
+    final currentCart = state.asData?.value;
+    if (currentCart == null || currentCart.lines.isEmpty) {
+      throw Exception('Cart is empty.');
+    }
+
+    final orderCanteenId = ref.read(selectedCanteenIdProvider);
+
+    // ── Debug diagnostics ──────────────────────────────────────────────
+    for (final line in currentCart.lines.values) {
+      debugPrint('[CANTEEN_DEBUG] _createOrder -> cart item: '
+          'id=${line.item.id}, name=${line.item.name}, '
+          'item.canteenId=${line.item.canteenId}');
+    }
+    debugPrint('[CANTEEN_DEBUG] _createOrder -> FINAL order canteen_id=$orderCanteenId');
+
+    // Check concurrent orders limit
+    final canteenRow = await supabase
+        .from('canteens')
+        .select('max_concurrent_orders')
+        .eq('id', orderCanteenId)
+        .maybeSingle();
+
+    if (canteenRow != null) {
+      int maxConcurrent = 99999;
+      try {
+        if (canteenRow['max_concurrent_orders'] != null) {
+          maxConcurrent = canteenRow['max_concurrent_orders'] as int;
+        }
+      } catch (_) {}
+
+      final activeCountRes = await supabase
+          .from('orders')
+          .select('id')
+          .eq('canteen_id', orderCanteenId)
+          .not('status', 'in', '("completed","delivered","declined","rejected","cancelled")');
+      final activeCount = activeCountRes.length;
+
+      if (maxConcurrent < 99999 && activeCount >= maxConcurrent) {
+        throw Exception(
+          'The canteen is currently busy and has paused taking new orders. '
+          'Please try again in a few minutes when some orders are completed.',
+        );
+      }
+    }
+
+    // 1. Insert order row with payment_status='pending'
+    final orderPayload = <String, dynamic>{
+      'student_id': userId,
+      'canteen_id': orderCanteenId,
+      'status': 'pending',
+      'payment_status': 'pending',
+      'total_amount': customTotal,
+    };
+    debugPrint('[CANTEEN_DEBUG] _createOrder -> INSERT payload: $orderPayload');
+
+    final newOrder = await supabase
+        .from(kOrdersTableName)
+        .insert(orderPayload)
+        .select()
+        .single();
+
+    final orderId = newOrder['id'] as String;
+    debugPrint('[CANTEEN_DEBUG] _createOrder -> created order id=$orderId');
+
+    // 2. Insert order items
+    final orderItemsData = currentCart.lines.values.map((line) => {
+      'order_id': orderId,
+      'menu_item_id': line.item.id,
+      'quantity': line.quantity,
+      'price': line.item.price,
+    }).toList();
+
+    await supabase.from(kOrderItemsTableName).insert(orderItemsData);
+    debugPrint('[CartController] _createOrder -> order items inserted for $orderId');
+    return orderId;
+  }
+
+  /// Public method called from CartScreen.
+  ///
+  /// 1. Updates/validates the phone number
+  /// 2. Creates the order in the DB (payment_status='pending')
+  /// 3. Calls the `create-cashfree-order` edge function
+  /// 4. Returns [CashfreeSessionData] so the UI can open the payment sheet
+  ///
+  /// Does NOT clear the cart — that happens after payment confirmation.
+  Future<CashfreeSessionData> initiatePayment({
+    required double total,
+    required String phone,
+  }) async {
     final userId = _userId;
-    if (userId == null) return;
+    if (userId == null) throw Exception('User not authenticated.');
 
     final supabase = ref.read(supabaseClientProvider);
 
-    // If phone is provided, update the profile first
-    if (phone != null && phone.trim().isNotEmpty) {
+    // 1. Persist the phone number to the profile
+    if (phone.trim().isNotEmpty) {
       try {
         await supabase
             .from(kProfilesTableName)
@@ -263,14 +356,14 @@ class CartController extends AsyncNotifier<CartState> {
       }
     }
 
-    // ── Phone number validation (fresh DB query) ──────────────────────
+    // 2. Validate phone from DB
     final profileRow = await supabase
         .from(kProfilesTableName)
-        .select('phone')
+        .select('phone, name, email')
         .eq('id', userId)
         .maybeSingle();
     final dbPhone = profileRow?['phone']?.toString().trim();
-    debugPrint('[CartController] placeOrder -> phone check: "$dbPhone"');
+    debugPrint('[CartController] initiatePayment -> phone check: "$dbPhone"');
     if (dbPhone == null || dbPhone.isEmpty) {
       throw Exception(
         'Phone number is required.\n'
@@ -278,127 +371,33 @@ class CartController extends AsyncNotifier<CartState> {
       );
     }
 
-    final currentCart = state.asData?.value;
-    if (currentCart == null || currentCart.lines.isEmpty) return;
+    // 3. Create order in DB
+    final orderId = await _createOrder(
+      customTotal: total,
+      userId: userId,
+      phone: dbPhone,
+    );
 
-    // ── CANTEEN ID RESOLUTION ──────────────────────────────────────────
-    // ALWAYS use the selected canteen ID for the order row. The item.canteenId
-    // field can carry a stale / wrong value (e.g. Gori Cafe 38a27df9-...)
-    // if old cart_items or menu_items reference a different canteen.
-    // This is the authoritative canteen for all customer orders in the
-    // Acktron deployment.
-    final orderCanteenId = ref.read(selectedCanteenIdProvider);
+    // 4. Create Cashfree session via edge function
+    final paymentController = ref.read(paymentControllerProvider);
+    final session = await paymentController.createCashfreeSession(
+      appOrderId: orderId,
+      amount: total,
+      customerPhone: dbPhone,
+      customerEmail: profileRow?['email']?.toString(),
+      customerName: profileRow?['name']?.toString(),
+      customerId: userId,
+    );
 
-    // ── Debug diagnostics ──────────────────────────────────────────────
-    for (final line in currentCart.lines.values) {
-      debugPrint('[CANTEEN_DEBUG] placeOrder -> cart item: '
-          'id=${line.item.id}, name=${line.item.name}, '
-          'item.canteenId=${line.item.canteenId}');
-    }
-    debugPrint('[CANTEEN_DEBUG] placeOrder -> FINAL order canteen_id=$orderCanteenId');
-    debugPrint('[CANTEEN_DEBUG] placeOrder -> Expected Acktron=$kAcktronCanteenId');
+    debugPrint('[CartController] initiatePayment -> session created: cfOrderId=${session.cfOrderId}');
+    return session;
+  }
 
-    try {
-      final supabase = ref.read(supabaseClientProvider);
-
-      // Check concurrent orders limit
-      final canteenRow = await supabase
-          .from('canteens')
-          .select('max_concurrent_orders')
-          .eq('id', orderCanteenId)
-          .maybeSingle();
-
-      DateTime? scheduledTime;
-
-      if (canteenRow != null) {
-        int maxConcurrent = 99999;
-        try {
-          if (canteenRow['max_concurrent_orders'] != null) {
-            maxConcurrent = canteenRow['max_concurrent_orders'] as int;
-          }
-        } catch (_) {}
-
-        // We need activeCount for both concurrency check and ETA calculation
-        final activeCountRes = await supabase
-            .from('orders')
-            .select('id')
-            .eq('canteen_id', orderCanteenId)
-            .not('status', 'in', '("completed","delivered","declined","rejected","cancelled")');
-        final activeCount = activeCountRes.length;
-
-        if (maxConcurrent < 99999) {
-          if (activeCount >= maxConcurrent) {
-            throw Exception(
-              'The canteen is currently busy and has paused taking new orders. '
-              'Please try again in a few minutes when some orders are completed.',
-            );
-          }
-        }
-
-        // Calculate ETA
-        int? maxPrepTime;
-        for (final line in currentCart.lines.values) {
-          if (line.item.prepTime != null) {
-            final totalItemPrepTime = line.item.prepTime! * line.quantity;
-            if (maxPrepTime == null || totalItemPrepTime > maxPrepTime) {
-              maxPrepTime = totalItemPrepTime;
-            }
-          }
-        }
-        
-        final readyInMinutes = (maxPrepTime ?? 10) + (activeCount * 2);
-        scheduledTime = DateTime.now().add(Duration(minutes: readyInMinutes));
-      }
-
-      final orderAmount = currentCart.totalAmount;
-      final packingCharge = currentCart.lines.values.fold(
-        0.0,
-        (sum, line) => sum + ((line.item.packingCharge) * line.quantity),
-      );
-      final totalWithCharges = orderAmount + packingCharge;
-
-      // 1. Insert order — always Acktron canteen
-      final orderPayload = <String, dynamic>{
-        'student_id': userId,
-        'canteen_id': orderCanteenId,
-        'status': 'pending',
-        'total_amount': customTotal ?? totalWithCharges,
-      };
-      debugPrint('[CANTEEN_DEBUG] placeOrder -> INSERT payload: $orderPayload');
-
-      final newOrder = await supabase
-          .from(kOrdersTableName)
-          .insert(orderPayload)
-          .select()
-          .single();
-
-      final orderId = newOrder['id'];
-      debugPrint('[CANTEEN_DEBUG] placeOrder -> created order id=$orderId');
-
-      // 2. Insert order items
-      final orderItemsData = currentCart.lines.values.map((line) => {
-        'order_id': orderId,
-        'menu_item_id': line.item.id,
-        'quantity': line.quantity,
-        'price': line.item.price,
-      }).toList();
-
-      await supabase.from(kOrderItemsTableName).insert(orderItemsData);
-
-      debugPrint('[CartController] Order $orderId placed successfully.');
-
-      // Vendor dashboard uses polling to detect new orders — no broadcast needed.
-
-      // 3. Successfully placed — clear cart
-      await clear();
-      
-      // 4. Invalidate the orders provider so that it instantly fetches the new order
-      // when the customer navigates to the Orders tab.
-      ref.invalidate(ordersProvider);
-    } catch (e) {
-      debugPrint('[CartController] placeOrder -> DB failure: $e');
-      throw Exception('Failed to place order: $e');
-    }
+  /// Called by the payment screen after successful payment verification
+  /// to clear the cart and refresh orders.
+  Future<void> onPaymentSuccess() async {
+    await clear();
+    ref.invalidate(ordersProvider);
   }
 
   Future<void> clear() async {

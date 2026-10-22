@@ -135,6 +135,10 @@ class AuthController extends AsyncNotifier<User?> {
     //    to request an ID token from Google.
     if (!_googleInitialized) {
       final webClientId = dotenv.env[kGoogleWebClientIdEnvKey] ?? '';
+      developer.log(
+        'Google Sign-In init: webClientId=${webClientId.isNotEmpty ? "${webClientId.substring(0, 10)}..." : "EMPTY"}',
+        name: 'AuthController',
+      );
       if (webClientId.isEmpty) {
         developer.log(
           'WARNING: $kGoogleWebClientIdEnvKey is not set in .env. '
@@ -142,16 +146,27 @@ class AuthController extends AsyncNotifier<User?> {
           name: 'AuthController',
         );
       }
-      await GoogleSignIn.instance.initialize(
-        serverClientId: webClientId.isNotEmpty ? webClientId : null,
-      );
-      _googleInitialized = true;
+      try {
+        await GoogleSignIn.instance.initialize(
+          serverClientId: webClientId.isNotEmpty ? webClientId : null,
+        );
+        _googleInitialized = true;
+        developer.log('Google Sign-In initialized successfully', name: 'AuthController');
+      } catch (e, st) {
+        developer.log(
+          'Google Sign-In initialize FAILED: $e\n$st',
+          name: 'AuthController',
+        );
+        rethrow;
+      }
     }
 
     // 2. Trigger the account picker / Credential Manager.
     GoogleSignInAccount? account;
     try {
+      developer.log('Calling GoogleSignIn.authenticate()...', name: 'AuthController');
       account = await GoogleSignIn.instance.authenticate();
+      developer.log('Google authenticate succeeded: ${account.email}', name: 'AuthController');
     } on GoogleSignInException catch (e) {
       developer.log(
         'GoogleSignInException: code=${e.code}, description=${e.description}',
@@ -161,11 +176,16 @@ class AuthController extends AsyncNotifier<User?> {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthCancelledException();
       }
-      // Any other Google-level failure
+      // Any other Google-level failure – include actual error details
       throw StateError(
-        'Google sign-in failed. Please check your internet connection '
-        'and try again.',
+        'Google sign-in error (${e.code}): ${e.description ?? "unknown"}',
       );
+    } catch (e, st) {
+      developer.log(
+        'Google authenticate UNEXPECTED error: ${e.runtimeType}: $e\n$st',
+        name: 'AuthController',
+      );
+      rethrow;
     }
 
     // 3. Extract the ID token.
@@ -181,17 +201,28 @@ class AuthController extends AsyncNotifier<User?> {
         'Please try again.',
       );
     }
+    developer.log('Got Google ID token (length: ${idToken.length})', name: 'AuthController');
 
     // 4. Exchange the Google ID token with Supabase.
     //    Note: google_sign_in v7.2.0 only returns idToken from
     //    authentication. accessToken requires a separate authorization
     //    call via authorizationClient.authorizeScopes(), which is not
     //    needed for Supabase ID-token-based auth.
-    final supabase = ref.read(supabaseClientProvider);
-    await supabase.auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-    );
+    try {
+      final supabase = ref.read(supabaseClientProvider);
+      developer.log('Exchanging ID token with Supabase...', name: 'AuthController');
+      await supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+      );
+      developer.log('Supabase signInWithIdToken succeeded!', name: 'AuthController');
+    } catch (e, st) {
+      developer.log(
+        'Supabase signInWithIdToken FAILED: ${e.runtimeType}: $e\n$st',
+        name: 'AuthController',
+      );
+      rethrow;
+    }
   }
 
   // ─── Sign Out ───────────────────────────────────────────────────

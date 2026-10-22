@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,32 +17,19 @@ class CartScreen extends ConsumerStatefulWidget {
   ConsumerState<CartScreen> createState() => _CartScreenState();
 }
 
-class _CartScreenState extends ConsumerState<CartScreen>
-    with SingleTickerProviderStateMixin {
+class _CartScreenState extends ConsumerState<CartScreen> {
   bool _isOrdering = false;
-  bool _orderSuccess = false;
   final TextEditingController _couponController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String _orderType = 'Dine In';
   double _discountAmount = 0.0;
   String? _appliedCouponCode;
 
-  late final AnimationController _successAnimController;
-  late final Animation<double> _successScaleAnim;
-
   bool _phoneAutoFilled = false;
 
   @override
   void initState() {
     super.initState();
-    _successAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _successScaleAnim = CurvedAnimation(
-      parent: _successAnimController,
-      curve: Curves.elasticOut,
-    );
   }
 
   @override
@@ -65,88 +51,34 @@ class _CartScreenState extends ConsumerState<CartScreen>
   void dispose() {
     _couponController.dispose();
     _phoneController.dispose();
-    _successAnimController.dispose();
     super.dispose();
   }
 
-  Future<void> _placeOrder(double total) async {
+  Future<void> _initiatePayment(double total) async {
     setState(() => _isOrdering = true);
     try {
-      await ref.read(cartControllerProvider.notifier).placeOrder(
-            customTotal: total,
+      final session = await ref
+          .read(cartControllerProvider.notifier)
+          .initiatePayment(
+            total: total,
             phone: _phoneController.text.trim(),
           );
+
       if (!mounted) return;
-      setState(() {
-        _isOrdering = false;
-        _orderSuccess = true;
-      });
-      _successAnimController.forward();
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) context.go('/orders');
+      // Navigate to payment screen, passing the session as GoRouter extra
+      setState(() => _isOrdering = false);
+      context.push('/payment', extra: session);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isOrdering = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to place order: $e'),
+          content: Text('$e'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
-  }
-
-  // ─── Success overlay ──────────────────────────────────────────────
-  Widget _buildSuccessOverlay(BuildContext context, bool isDark) {
-    final bg = isDark ? AppColors.backgroundDark : const Color(0xFFFFF9EC);
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-
-    return Container(
-      color: bg,
-      child: Center(
-        child: ScaleTransition(
-          scale: _successScaleAnim,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle_rounded,
-                    color: AppColors.accent, size: 64),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                '🎉 Order Placed\nSuccessfully!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimary,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Redirecting to your orders...',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  color: textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -160,8 +92,6 @@ class _CartScreenState extends ConsumerState<CartScreen>
     final currentCanteen = ref.watch(currentCanteenProvider);
     final canteenId = currentCanteen?.id ?? '';
     final couponsAsync = ref.watch(canteenCouponsProvider(canteenId));
-
-    if (_orderSuccess) return _buildSuccessOverlay(context, isDark);
 
     return Scaffold(
       backgroundColor: bg,
@@ -1033,7 +963,7 @@ class _CartScreenState extends ConsumerState<CartScreen>
             boxShadow: (isEmpty || _isOrdering) ? null : AppShadows.primaryGlow,
           ),
           child: ElevatedButton(
-            onPressed: (isEmpty || _isOrdering) ? null : () => _placeOrder(total),
+            onPressed: (isEmpty || _isOrdering) ? null : () => _initiatePayment(total),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
@@ -1054,10 +984,10 @@ class _CartScreenState extends ConsumerState<CartScreen>
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      Icon(Icons.shopping_cart_checkout_rounded, size: 20, color: Colors.white),
+                      Icon(Icons.currency_rupee_rounded, size: 20, color: Colors.white),
                       SizedBox(width: 8),
                       Text(
-                        'Confirm Order',
+                        'Pay with Cashfree',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 16,
