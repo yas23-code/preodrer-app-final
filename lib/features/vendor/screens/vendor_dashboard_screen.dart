@@ -48,8 +48,11 @@ class _VendorDashboardScreenState extends ConsumerState<VendorDashboardScreen> {
       final allOrders = ref.read(vendorOrdersProvider).value ?? [];
       final matchingOrders = allOrders.where((o) {
         if (o['raw_status'] != 'ready') return false;
-        final pinVal = o['secretPin']?.toString() ?? (o['id'] as String).substring(0, 4).toUpperCase();
-        return pinVal == input;
+        final pinVal = (o['secretPin']?.toString() ?? (o['id'] as String).substring(0, 4)).toUpperCase();
+        final pCode = (o['pickup_code']?.toString() ?? '').toUpperCase();
+        final qrTok = (o['qr_token']?.toString() ?? '').toUpperCase();
+        final fullId = (o['id'] as String? ?? '').toUpperCase();
+        return pinVal == input || pCode == input || qrTok == input || fullId == input;
       }).toList();
 
       if (matchingOrders.isEmpty) {

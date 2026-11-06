@@ -114,9 +114,9 @@ class OrdersScreen extends ConsumerWidget {
     final displayId = orderId.length >= 8
         ? orderId.substring(4, 8).toUpperCase()
         : orderId;
-    final secretPin = orderId.length >= 4
-        ? orderId.substring(0, 4).toUpperCase()
-        : '----';
+    final secretPin = (order['pickup_code'] as String?)?.trim().isNotEmpty == true
+        ? (order['pickup_code'] as String).trim().toUpperCase()
+        : (orderId.length >= 4 ? orderId.substring(0, 4).toUpperCase() : '----');
 
     final status = (order['status'] as String? ?? 'processing').toLowerCase();
     final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
