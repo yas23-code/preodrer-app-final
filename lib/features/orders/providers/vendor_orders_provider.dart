@@ -131,6 +131,7 @@ class VendorOrdersController extends AsyncNotifier<List<Map<String, dynamic>>> {
           .from(kOrdersTableName)
           .select('id, status, total_amount, created_at, canteen_id, student_id, profiles!student_id(*), order_items(*, menu_items(*))')
           .inFilter('canteen_id', canteenIds)
+          .eq('payment_status', 'paid')
           .order('created_at', ascending: false);
 
       return _mapOrdersToUi(response as List<dynamic>);
