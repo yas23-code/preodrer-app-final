@@ -372,7 +372,7 @@ class OrdersScreen extends ConsumerWidget {
     Color fg = Colors.grey.shade600;
     String label = status.toUpperCase();
 
-    if (status.contains('waiting') || status.contains('pending')) {
+    if (status.contains('waiting') || status.contains('pending') || status.contains('confirmed')) {
       bg = const Color(0xFFFFF9C4); // Light yellow
       fg = const Color(0xFFF57F17); // Dark yellow
       label = '🟡 Waiting';
@@ -459,7 +459,7 @@ class OrdersScreen extends ConsumerWidget {
     String text = 'Processing order...';
     IconData icon = Icons.timer_outlined;
 
-    if (status.contains('waiting') || status.contains('pending')) {
+    if (status.contains('waiting') || status.contains('pending') || status.contains('confirmed')) {
       text = 'Waiting for Confirmation';
       icon = Icons.hourglass_empty;
     } else if (status.contains('ready')) {
