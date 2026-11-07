@@ -7,17 +7,23 @@ final paymentControllerProvider = Provider<PaymentController>((ref) {
   return PaymentController(ref);
 });
 
-/// Data returned by [PaymentController.createCashfreeSession] after the
-/// Supabase edge function creates the order on Cashfree's server.
-class CashfreeSessionData {
+/// Data returned by [PaymentController.createRazorpayOrder] after the
+/// Supabase edge function creates the order on Razorpay's server.
+class RazorpaySessionData {
   final String appOrderId;       // Our own UUID from `orders` table
-  final String cfOrderId;        // Cashfree's cf_order_id
-  final String paymentSessionId; // Used to open the Cashfree SDK payment sheet
+  final String razorpayOrderId;  // Razorpay's order_id (e.g. order_XXXX)
+  final double amount;           // Amount in INR (for display)
+  final String customerPhone;
+  final String? customerEmail;
+  final String? customerName;
 
-  const CashfreeSessionData({
+  const RazorpaySessionData({
     required this.appOrderId,
-    required this.cfOrderId,
-    required this.paymentSessionId,
+    required this.razorpayOrderId,
+    required this.amount,
+    required this.customerPhone,
+    this.customerEmail,
+    this.customerName,
   });
 }
 
@@ -26,13 +32,13 @@ class PaymentController {
 
   PaymentController(this.ref);
 
-  /// Calls the `create-cashfree-order` Supabase Edge Function.
+  /// Calls the `create-razorpay-order` Supabase Edge Function.
   ///
   /// The edge function:
-  ///   1. Calls Cashfree API to create an order
-  ///   2. Updates `orders.cashfree_order_id` and `orders.payment_session_id`
-  ///   3. Returns `{ cf_order_id, payment_session_id }`
-  Future<CashfreeSessionData> createCashfreeSession({
+  ///   1. Calls Razorpay API to create an order
+  ///   2. Updates `orders.razorpay_order_id`
+  ///   3. Returns `{ razorpay_order_id }`
+  Future<RazorpaySessionData> createRazorpayOrder({
     required String appOrderId,
     required double amount,
     required String customerPhone,
@@ -43,7 +49,7 @@ class PaymentController {
     final supabase = ref.read(supabaseClientProvider);
 
     final response = await supabase.functions.invoke(
-      kCreateCashfreeOrderFunction,
+      kCreateRazorpayOrderFunction,
       body: {
         'app_order_id': appOrderId,
         'amount': amount,
@@ -56,43 +62,56 @@ class PaymentController {
 
     if (response.status != 200) {
       throw Exception(
-        'Failed to create Cashfree session (HTTP ${response.status}): ${response.data}',
+        'Failed to create Razorpay order (HTTP ${response.status}): ${response.data}',
       );
     }
 
     final data = response.data as Map<String, dynamic>;
 
-    final cfOrderId = data['cf_order_id']?.toString();
-    final paymentSessionId = data['payment_session_id']?.toString();
+    final razorpayOrderId = data['razorpay_order_id']?.toString();
 
-    if (cfOrderId == null || paymentSessionId == null) {
+    if (razorpayOrderId == null) {
       throw Exception(
         'Invalid response from payment server: $data',
       );
     }
 
-    return CashfreeSessionData(
+    return RazorpaySessionData(
       appOrderId: appOrderId,
-      cfOrderId: cfOrderId,
-      paymentSessionId: paymentSessionId,
+      razorpayOrderId: razorpayOrderId,
+      amount: amount,
+      customerPhone: customerPhone,
+      customerEmail: customerEmail,
+      customerName: customerName,
     );
   }
 
-  /// Calls the `verify-cashfree-payment` Supabase Edge Function.
+  /// Calls the `verify-razorpay-payment` Supabase Edge Function.
   ///
+  /// Verifies payment using Razorpay signature or direct server API verification.
   /// Returns `true` if payment is confirmed as PAID.
-  Future<bool> verifyCashfreePayment({
+  Future<bool> verifyRazorpayPayment({
     required String appOrderId,
-    required String cfOrderId,
+    required String razorpayOrderId,
+    String? razorpayPaymentId,
+    String? razorpaySignature,
   }) async {
     final supabase = ref.read(supabaseClientProvider);
 
+    final payload = <String, dynamic>{
+      'app_order_id': appOrderId,
+      'razorpay_order_id': razorpayOrderId,
+    };
+    if (razorpayPaymentId != null && razorpayPaymentId.isNotEmpty) {
+      payload['razorpay_payment_id'] = razorpayPaymentId;
+    }
+    if (razorpaySignature != null && razorpaySignature.isNotEmpty) {
+      payload['razorpay_signature'] = razorpaySignature;
+    }
+
     final response = await supabase.functions.invoke(
-      kVerifyCashfreePaymentFunction,
-      body: {
-        'app_order_id': appOrderId,
-        'cf_order_id': cfOrderId,
-      },
+      kVerifyRazorpayPaymentFunction,
+      body: payload,
     );
 
     if (response.status != 200) {

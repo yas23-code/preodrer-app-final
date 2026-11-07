@@ -987,7 +987,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       Icon(Icons.currency_rupee_rounded, size: 20, color: Colors.white),
                       SizedBox(width: 8),
                       Text(
-                        'Pay with Cashfree',
+                        'Pay with Razorpay',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 16,

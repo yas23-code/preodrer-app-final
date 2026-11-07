@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfpaymentgateway/cfpaymentgatewayservice.dart';
-import 'package:flutter_cashfree_pg_sdk/api/cfsession/cfsession.dart';
-import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
+import '../../../core/constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../cart/providers/cart_controller.dart';
 import '../../payment/providers/payment_provider.dart';
 
-/// Screen that opens the Cashfree native payment sheet.
+/// Screen that opens the Razorpay payment sheet.
 ///
-/// Expects [GoRouterState.extra] to be a [CashfreeSessionData] instance,
+/// Expects [GoRouterState.extra] to be a [RazorpaySessionData] instance,
 /// passed by CartScreen after calling [CartController.initiatePayment()].
 class PaymentWebviewScreen extends ConsumerStatefulWidget {
   const PaymentWebviewScreen({super.key});
@@ -25,22 +23,30 @@ class PaymentWebviewScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
-  // Singleton gateway service — use factory constructor
-  final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
+  late Razorpay _razorpay;
 
   bool _isLoading = true;
+  bool _isCheckingStatus = false;
   bool _paymentDone = false;
   bool _paymentSuccess = false;
   String? _statusMessage;
 
-  CashfreeSessionData? _session;
+  RazorpaySessionData? _session;
   bool _sessionExtracted = false;
 
   @override
   void initState() {
     super.initState();
-    // Register callbacks BEFORE the sheet is opened
-    _cfService.setCallback(_onPaymentVerify, _onPaymentError);
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
   }
 
   @override
@@ -50,7 +56,7 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
       _sessionExtracted = true;
       // Extract the session data passed via GoRouter extra
       final extra = GoRouterState.of(context).extra;
-      if (extra is CashfreeSessionData) {
+      if (extra is RazorpaySessionData) {
         _session = extra;
         WidgetsBinding.instance.addPostFrameCallback((_) => _openPaymentSheet());
       } else {
@@ -70,25 +76,36 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
     }
   }
 
-  Future<void> _openPaymentSheet() async {
+  void _openPaymentSheet() {
     final session = _session;
     if (session == null) return;
 
     try {
-      // Build Cashfree session — use cfOrderId as the orderId for the SDK
-      final cfSession = CFSessionBuilder()
-          .setEnvironment(CFEnvironment.PRODUCTION)
-          .setOrderId(session.cfOrderId)
-          .setPaymentSessionId(session.paymentSessionId)
-          .build();
+      final razorpayKeyId = dotenv.env[kRazorpayKeyIdEnvKey] ?? '';
+      if (razorpayKeyId.isEmpty) {
+        throw Exception('Razorpay Key ID not configured in .env');
+      }
 
-      // Build web checkout payment object
-      final cfWebCheckoutPayment = CFWebCheckoutPaymentBuilder()
-          .setSession(cfSession)
-          .build();
+      // Amount must be in paise (INR × 100) for Razorpay
+      final amountInPaise = (session.amount * 100).toInt();
 
-      // Open native payment sheet
-      _cfService.doPayment(cfWebCheckoutPayment);
+      final options = {
+        'key': razorpayKeyId,
+        'amount': amountInPaise,
+        'order_id': session.razorpayOrderId,
+        'name': 'Preorder App',
+        'description': 'Order #${session.appOrderId.substring(0, 8)}',
+        'prefill': {
+          'contact': session.customerPhone,
+          'email': session.customerEmail ?? 'customer@preorder.app',
+          'name': session.customerName ?? 'Student',
+        },
+        'theme': {
+          'color': '#E53935', // AppColors.accent
+        },
+      };
+
+      _razorpay.open(options);
     } catch (e) {
       debugPrint('[PaymentScreen] Error opening payment sheet: $e');
       if (mounted) {
@@ -102,39 +119,31 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
     }
   }
 
-  // ── Cashfree SDK callback: payment initiated — verify server-side ─────
-  void _onPaymentVerify(String orderId) async {
-    debugPrint('[PaymentScreen] _onPaymentVerify called with orderId=$orderId');
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
+  // ── Helper to verify order status with backend / Razorpay API ────────
+  Future<bool> _verifyWithBackend({
+    String? paymentId,
+    String? signature,
+  }) async {
     final session = _session;
-    if (session == null) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _paymentDone = true;
-          _paymentSuccess = false;
-          _statusMessage = 'Session lost. Please check your orders.';
-        });
-      }
-      return;
-    }
+    if (session == null) return false;
 
     try {
       final paymentController = ref.read(paymentControllerProvider);
-      final ok = await paymentController.verifyCashfreePayment(
+      final ok = await paymentController.verifyRazorpayPayment(
         appOrderId: session.appOrderId,
-        cfOrderId: session.cfOrderId,
+        razorpayOrderId: session.razorpayOrderId,
+        razorpayPaymentId: paymentId,
+        razorpaySignature: signature,
       );
 
       if (ok) {
         // Clear cart + refresh orders list
         await ref.read(cartControllerProvider.notifier).onPaymentSuccess();
 
-        if (!mounted) return;
+        if (!mounted) return true;
         setState(() {
           _isLoading = false;
+          _isCheckingStatus = false;
           _paymentDone = true;
           _paymentSuccess = true;
           _statusMessage = '🎉 Payment Successful!';
@@ -143,40 +152,99 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
         // Redirect to orders after brief success display
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) context.go('/orders');
-      } else {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _paymentDone = true;
-          _paymentSuccess = false;
-          _statusMessage =
-              'Payment could not be verified. Please check your orders or contact support.';
-        });
+        return true;
       }
     } catch (e) {
       debugPrint('[PaymentScreen] Verification error: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _paymentDone = true;
-          _paymentSuccess = false;
-          _statusMessage = 'Verification failed: $e';
-        });
-      }
+    }
+    return false;
+  }
+
+  // ── Razorpay callback: payment successful — verify server-side ────────
+  void _onPaymentSuccess(PaymentSuccessResponse response) async {
+    debugPrint(
+        '[PaymentScreen] _onPaymentSuccess: paymentId=${response.paymentId}, orderId=${response.orderId}');
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    final ok = await _verifyWithBackend(
+      paymentId: response.paymentId,
+      signature: response.signature,
+    );
+
+    if (!ok && mounted) {
+      setState(() {
+        _isLoading = false;
+        _paymentDone = true;
+        _paymentSuccess = false;
+        _statusMessage =
+            'Payment could not be verified yet. If money was deducted, click "Check Payment Status" below.';
+      });
     }
   }
 
-  // ── Cashfree SDK callback: payment error/cancelled ────────────────────
-  void _onPaymentError(CFErrorResponse error, String orderId) {
+  // ── Razorpay callback: payment error / timeout / cancellation ─────────
+  void _onPaymentError(PaymentFailureResponse response) async {
     debugPrint(
-        '[PaymentScreen] _onPaymentError: ${error.getMessage()}, orderId=$orderId');
+        '[PaymentScreen] _onPaymentError: code=${response.code}, message=${response.message}');
+    if (!mounted) return;
+
+    // CRITICAL: Do NOT immediately mark as failed!
+    // In UPI apps (GPay, PhonePe, Paytm), money is often deducted at the bank
+    // before the callback returns to Flutter, causing SDK to trigger _onPaymentError.
+    // Query our backend to check if Razorpay captured the payment!
+    setState(() {
+      _isLoading = true;
+      _statusMessage = 'Confirming payment with your bank...';
+    });
+
+    // Check 1: Immediate check with server
+    final ok1 = await _verifyWithBackend();
+    if (ok1) return;
+
+    // Check 2: Wait 2.5 seconds and retry (UPI webhook/settlement delay)
+    await Future.delayed(const Duration(milliseconds: 2500));
+    if (!mounted) return;
+    final ok2 = await _verifyWithBackend();
+    if (ok2) return;
+
+    // If still not verified, show friendly screen with retry option
     if (!mounted) return;
     setState(() {
       _isLoading = false;
       _paymentDone = true;
       _paymentSuccess = false;
-      _statusMessage = error.getMessage() ?? 'Payment was cancelled or failed.';
+      _statusMessage =
+          'Payment not received. If money was debited from your bank account, click "Check Payment Status" below to verify.';
     });
+  }
+
+  // ── Manual Status Check Button ────────────────────────────────────────
+  Future<void> _handleManualCheck() async {
+    setState(() {
+      _isCheckingStatus = true;
+      _statusMessage = 'Checking with payment gateway...';
+    });
+
+    final ok = await _verifyWithBackend();
+    if (!ok && mounted) {
+      setState(() {
+        _isCheckingStatus = false;
+        _statusMessage =
+            'Payment is not yet confirmed by the bank. If money was debited, it will either settle or be automatically refunded within 24-48 hours.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment not found yet. Please check again in a minute.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  // ── Razorpay callback: external wallet selected ───────────────────────
+  void _onExternalWallet(ExternalWalletResponse response) {
+    debugPrint('[PaymentScreen] External wallet selected: ${response.walletName}');
   }
 
   @override
@@ -226,8 +294,9 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
           const SizedBox(height: 24),
           Text(
             _isLoading && _session != null
-                ? 'Verifying Payment...'
+                ? (_statusMessage ?? 'Verifying Payment...')
                 : 'Opening Payment...',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 16,
@@ -239,7 +308,7 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Please complete payment in the Cashfree screen',
+            'Please complete payment in the Razorpay screen',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',
@@ -283,7 +352,7 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
 
             // Status text
             Text(
-              _paymentSuccess ? 'Payment Successful!' : 'Payment Failed',
+              _paymentSuccess ? 'Payment Successful!' : 'Payment Pending / Failed',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 22,
@@ -304,39 +373,69 @@ class _PaymentWebviewScreenState extends ConsumerState<PaymentWebviewScreen> {
             ),
             const SizedBox(height: 36),
 
-            // Action button (only shown on failure)
-            if (!_paymentSuccess)
+            // Check Payment Status Button (for when money was deducted)
+            if (!_paymentSuccess) ...[
               SizedBox(
                 width: double.infinity,
                 height: 50,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: AppShadows.primaryGlow,
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/cart'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                child: ElevatedButton.icon(
+                  onPressed: _isCheckingStatus ? null : _handleManualCheck,
+                  icon: _isCheckingStatus
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  label: Text(
+                    _isCheckingStatus
+                        ? 'Checking...'
+                        : 'Check Payment Status',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
-                    child: const Text(
-                      'Back to Cart',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: () => context.go('/cart'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: textPrimary,
+                    side: BorderSide(
+                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Back to Cart',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             if (_paymentSuccess)
               Text(

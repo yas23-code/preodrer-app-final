@@ -22,6 +22,9 @@ const kAcktronCanteenId = 'b4b45a67-1f47-4b40-91bd-16b0e36feab9';
 const kAcktronVendorId  = '252a9dc4-dfe7-4397-b4d1-f2ca65dced8d';
 
 // Edge Function names
-const kCreateCashfreeOrderFunction = 'create-cashfree-order';
-const kVerifyCashfreePaymentFunction = 'verify-cashfree-payment';
+const kCreateRazorpayOrderFunction = 'create-razorpay-order';
+const kVerifyRazorpayPaymentFunction = 'verify-razorpay-payment';
+
+// Razorpay
+const kRazorpayKeyIdEnvKey = 'RAZORPAY_KEY_ID';
 

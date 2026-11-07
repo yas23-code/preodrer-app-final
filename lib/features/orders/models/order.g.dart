@@ -13,7 +13,7 @@ _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
   status: json['status'] as String,
   totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0.0,
   paymentStatus: json['payment_status'] as String?,
-  cashfreeOrderId: json['cashfree_order_id'] as String?,
+  razorpayOrderId: json['razorpay_order_id'] as String?,
   createdAt:
       json['created_at'] == null
           ? null
@@ -31,7 +31,7 @@ Map<String, dynamic> _$OrderToJson(_Order instance) => <String, dynamic>{
   'status': instance.status,
   'total_amount': instance.totalAmount,
   'payment_status': instance.paymentStatus,
-  'cashfree_order_id': instance.cashfreeOrderId,
+  'razorpay_order_id': instance.razorpayOrderId,
   'created_at': instance.createdAt?.toIso8601String(),
   'scheduled_time': instance.scheduledTime?.toIso8601String(),
 };

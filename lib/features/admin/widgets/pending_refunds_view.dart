@@ -198,7 +198,7 @@ class _PendingRefundsViewState extends ConsumerState<PendingRefundsView> {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Ensure all rejected orders are manually refunded or processed through cashfree, then mark them as processed here to maintain audit compliance.',
+            'Ensure all rejected orders are manually refunded or processed through Razorpay, then mark them as processed here to maintain audit compliance.',
             style: TextStyle(
               color: Color(0xFFFFECEB),
               fontSize: 13,

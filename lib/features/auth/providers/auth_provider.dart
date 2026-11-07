@@ -172,13 +172,13 @@ class AuthController extends AsyncNotifier<User?> {
         'GoogleSignInException: code=${e.code}, description=${e.description}',
         name: 'AuthController',
       );
-      // User deliberately dismissed the picker
-      if (e.code == GoogleSignInExceptionCode.canceled) {
+      // User deliberately dismissed the picker without an underlying error
+      if (e.code == GoogleSignInExceptionCode.canceled && (e.description == null || e.description!.isEmpty)) {
         throw const AuthCancelledException();
       }
       // Any other Google-level failure – include actual error details
       throw StateError(
-        'Google sign-in error (${e.code}): ${e.description ?? "unknown"}',
+        'Google sign-in error (${e.code}): ${e.description ?? "cancelled"}',
       );
     } catch (e, st) {
       developer.log(

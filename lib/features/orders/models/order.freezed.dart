@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Order {
 
- String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'canteen_id') String? get canteenId; String get status;@JsonKey(name: 'total_amount') double get totalAmount;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'cashfree_order_id') String? get cashfreeOrderId;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'scheduled_time') DateTime? get scheduledTime;
+ String get id;@JsonKey(name: 'student_id') String get studentId;@JsonKey(name: 'canteen_id') String? get canteenId; String get status;@JsonKey(name: 'total_amount') double get totalAmount;@JsonKey(name: 'payment_status') String? get paymentStatus;@JsonKey(name: 'razorpay_order_id') String? get razorpayOrderId;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'scheduled_time') DateTime? get scheduledTime;
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $OrderCopyWith<Order> get copyWith => _$OrderCopyWithImpl<Order>(this as Order, 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cashfreeOrderId, cashfreeOrderId) || other.cashfreeOrderId == cashfreeOrderId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.scheduledTime, scheduledTime) || other.scheduledTime == scheduledTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.razorpayOrderId, razorpayOrderId) || other.razorpayOrderId == razorpayOrderId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.scheduledTime, scheduledTime) || other.scheduledTime == scheduledTime));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,studentId,canteenId,status,totalAmount,paymentStatus,cashfreeOrderId,createdAt,scheduledTime);
+int get hashCode => Object.hash(runtimeType,id,studentId,canteenId,status,totalAmount,paymentStatus,razorpayOrderId,createdAt,scheduledTime);
 
 @override
 String toString() {
-  return 'Order(id: $id, studentId: $studentId, canteenId: $canteenId, status: $status, totalAmount: $totalAmount, paymentStatus: $paymentStatus, cashfreeOrderId: $cashfreeOrderId, createdAt: $createdAt, scheduledTime: $scheduledTime)';
+  return 'Order(id: $id, studentId: $studentId, canteenId: $canteenId, status: $status, totalAmount: $totalAmount, paymentStatus: $paymentStatus, razorpayOrderId: $razorpayOrderId, createdAt: $createdAt, scheduledTime: $scheduledTime)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $OrderCopyWith<$Res>  {
   factory $OrderCopyWith(Order value, $Res Function(Order) _then) = _$OrderCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'canteen_id') String? canteenId, String status,@JsonKey(name: 'total_amount') double totalAmount,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cashfree_order_id') String? cashfreeOrderId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'scheduled_time') DateTime? scheduledTime
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'canteen_id') String? canteenId, String status,@JsonKey(name: 'total_amount') double totalAmount,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'razorpay_order_id') String? razorpayOrderId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'scheduled_time') DateTime? scheduledTime
 });
 
 
@@ -65,7 +65,7 @@ class _$OrderCopyWithImpl<$Res>
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? studentId = null,Object? canteenId = freezed,Object? status = null,Object? totalAmount = null,Object? paymentStatus = freezed,Object? cashfreeOrderId = freezed,Object? createdAt = freezed,Object? scheduledTime = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? studentId = null,Object? canteenId = freezed,Object? status = null,Object? totalAmount = null,Object? paymentStatus = freezed,Object? razorpayOrderId = freezed,Object? createdAt = freezed,Object? scheduledTime = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,7 @@ as String,canteenId: freezed == canteenId ? _self.canteenId : canteenId // ignor
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,totalAmount: null == totalAmount ? _self.totalAmount : totalAmount // ignore: cast_nullable_to_non_nullable
 as double,paymentStatus: freezed == paymentStatus ? _self.paymentStatus : paymentStatus // ignore: cast_nullable_to_non_nullable
-as String?,cashfreeOrderId: freezed == cashfreeOrderId ? _self.cashfreeOrderId : cashfreeOrderId // ignore: cast_nullable_to_non_nullable
+as String?,razorpayOrderId: freezed == razorpayOrderId ? _self.razorpayOrderId : razorpayOrderId // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,scheduledTime: freezed == scheduledTime ? _self.scheduledTime : scheduledTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -161,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cashfree_order_id')  String? cashfreeOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'razorpay_order_id')  String? razorpayOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
-return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.cashfreeOrderId,_that.createdAt,_that.scheduledTime);case _:
+return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.razorpayOrderId,_that.createdAt,_that.scheduledTime);case _:
   return orElse();
 
 }
@@ -182,10 +182,10 @@ return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.tota
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cashfree_order_id')  String? cashfreeOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'razorpay_order_id')  String? razorpayOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)  $default,) {final _that = this;
 switch (_that) {
 case _Order():
-return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.cashfreeOrderId,_that.createdAt,_that.scheduledTime);case _:
+return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.razorpayOrderId,_that.createdAt,_that.scheduledTime);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +202,10 @@ return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.tota
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'cashfree_order_id')  String? cashfreeOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'student_id')  String studentId, @JsonKey(name: 'canteen_id')  String? canteenId,  String status, @JsonKey(name: 'total_amount')  double totalAmount, @JsonKey(name: 'payment_status')  String? paymentStatus, @JsonKey(name: 'razorpay_order_id')  String? razorpayOrderId, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'scheduled_time')  DateTime? scheduledTime)?  $default,) {final _that = this;
 switch (_that) {
 case _Order() when $default != null:
-return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.cashfreeOrderId,_that.createdAt,_that.scheduledTime);case _:
+return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.totalAmount,_that.paymentStatus,_that.razorpayOrderId,_that.createdAt,_that.scheduledTime);case _:
   return null;
 
 }
@@ -217,7 +217,7 @@ return $default(_that.id,_that.studentId,_that.canteenId,_that.status,_that.tota
 @JsonSerializable()
 
 class _Order implements Order {
-  const _Order({required this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'canteen_id') this.canteenId, required this.status, @JsonKey(name: 'total_amount') this.totalAmount = 0.0, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'cashfree_order_id') this.cashfreeOrderId, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'scheduled_time') this.scheduledTime});
+  const _Order({required this.id, @JsonKey(name: 'student_id') required this.studentId, @JsonKey(name: 'canteen_id') this.canteenId, required this.status, @JsonKey(name: 'total_amount') this.totalAmount = 0.0, @JsonKey(name: 'payment_status') this.paymentStatus, @JsonKey(name: 'razorpay_order_id') this.razorpayOrderId, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'scheduled_time') this.scheduledTime});
   factory _Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
 @override final  String id;
@@ -226,7 +226,7 @@ class _Order implements Order {
 @override final  String status;
 @override@JsonKey(name: 'total_amount') final  double totalAmount;
 @override@JsonKey(name: 'payment_status') final  String? paymentStatus;
-@override@JsonKey(name: 'cashfree_order_id') final  String? cashfreeOrderId;
+@override@JsonKey(name: 'razorpay_order_id') final  String? razorpayOrderId;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
 @override@JsonKey(name: 'scheduled_time') final  DateTime? scheduledTime;
 
@@ -243,16 +243,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.cashfreeOrderId, cashfreeOrderId) || other.cashfreeOrderId == cashfreeOrderId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.scheduledTime, scheduledTime) || other.scheduledTime == scheduledTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.studentId, studentId) || other.studentId == studentId)&&(identical(other.canteenId, canteenId) || other.canteenId == canteenId)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalAmount, totalAmount) || other.totalAmount == totalAmount)&&(identical(other.paymentStatus, paymentStatus) || other.paymentStatus == paymentStatus)&&(identical(other.razorpayOrderId, razorpayOrderId) || other.razorpayOrderId == razorpayOrderId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.scheduledTime, scheduledTime) || other.scheduledTime == scheduledTime));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,studentId,canteenId,status,totalAmount,paymentStatus,cashfreeOrderId,createdAt,scheduledTime);
+int get hashCode => Object.hash(runtimeType,id,studentId,canteenId,status,totalAmount,paymentStatus,razorpayOrderId,createdAt,scheduledTime);
 
 @override
 String toString() {
-  return 'Order(id: $id, studentId: $studentId, canteenId: $canteenId, status: $status, totalAmount: $totalAmount, paymentStatus: $paymentStatus, cashfreeOrderId: $cashfreeOrderId, createdAt: $createdAt, scheduledTime: $scheduledTime)';
+  return 'Order(id: $id, studentId: $studentId, canteenId: $canteenId, status: $status, totalAmount: $totalAmount, paymentStatus: $paymentStatus, razorpayOrderId: $razorpayOrderId, createdAt: $createdAt, scheduledTime: $scheduledTime)';
 }
 
 
@@ -263,7 +263,7 @@ abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
   factory _$OrderCopyWith(_Order value, $Res Function(_Order) _then) = __$OrderCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'canteen_id') String? canteenId, String status,@JsonKey(name: 'total_amount') double totalAmount,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'cashfree_order_id') String? cashfreeOrderId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'scheduled_time') DateTime? scheduledTime
+ String id,@JsonKey(name: 'student_id') String studentId,@JsonKey(name: 'canteen_id') String? canteenId, String status,@JsonKey(name: 'total_amount') double totalAmount,@JsonKey(name: 'payment_status') String? paymentStatus,@JsonKey(name: 'razorpay_order_id') String? razorpayOrderId,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'scheduled_time') DateTime? scheduledTime
 });
 
 
@@ -280,7 +280,7 @@ class __$OrderCopyWithImpl<$Res>
 
 /// Create a copy of Order
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? studentId = null,Object? canteenId = freezed,Object? status = null,Object? totalAmount = null,Object? paymentStatus = freezed,Object? cashfreeOrderId = freezed,Object? createdAt = freezed,Object? scheduledTime = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? studentId = null,Object? canteenId = freezed,Object? status = null,Object? totalAmount = null,Object? paymentStatus = freezed,Object? razorpayOrderId = freezed,Object? createdAt = freezed,Object? scheduledTime = freezed,}) {
   return _then(_Order(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,studentId: null == studentId ? _self.studentId : studentId // ignore: cast_nullable_to_non_nullable
@@ -288,7 +288,7 @@ as String,canteenId: freezed == canteenId ? _self.canteenId : canteenId // ignor
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,totalAmount: null == totalAmount ? _self.totalAmount : totalAmount // ignore: cast_nullable_to_non_nullable
 as double,paymentStatus: freezed == paymentStatus ? _self.paymentStatus : paymentStatus // ignore: cast_nullable_to_non_nullable
-as String?,cashfreeOrderId: freezed == cashfreeOrderId ? _self.cashfreeOrderId : cashfreeOrderId // ignore: cast_nullable_to_non_nullable
+as String?,razorpayOrderId: freezed == razorpayOrderId ? _self.razorpayOrderId : razorpayOrderId // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,scheduledTime: freezed == scheduledTime ? _self.scheduledTime : scheduledTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,

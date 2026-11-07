@@ -17,7 +17,7 @@ This document provides a comprehensive overview of the `preorder_app` project, i
 *   **Push Notifications:** Firebase Cloud Messaging (`firebase_core`, `firebase_messaging`) & Local Notifications (`flutter_local_notifications`)
 *   **Data Serialization / Models:** Freezed & JSON Serializable (`freezed_annotation`, `json_annotation`, `freezed`, `json_serializable`, `build_runner`)
 *   **UI Components:** `cupertino_icons`, `fl_chart`, `cached_network_image`
-*   **Payment Gateway Integration:** WebView based Cashfree implementation (`webview_flutter`) & Supabase Edge Functions.
+*   **Payment Gateway Integration:** Razorpay Flutter SDK (`razorpay_flutter`) with Supabase Edge Functions for order creation and signature-based payment verification.
 *   **QR Code / Scanning:** `qr_flutter`, `mobile_scanner`
 *   **Mapping:** `flutter_map`, `latlong2`
 *   **Environment Management:** `flutter_dotenv`
@@ -37,9 +37,9 @@ GOOGLE_WEB_CLIENT_ID=916332647336-en5tt6r33v14flnkhqg3i23nh2fd49km.apps.googleus
 **Important Hardcoded Constants (from `lib/core/constants.dart`):**
 *   **Acktron Canteen ID:** `b4b45a67-1f47-4b40-91bd-16b0e36feab9`
 *   **Acktron Vendor ID:** `252a9dc4-dfe7-4397-b4d1-f2ca65dced8d`
-*   **Cashfree Edge Functions:**
-    *   `create-cashfree-order`
-    *   `verify-cashfree-payment`
+*   **Razorpay Edge Functions:**
+    *   `create-razorpay-order`
+    *   `verify-razorpay-payment`
 
 ## 4. Architecture & Directory Structure
 The project follows a feature-first architecture using Riverpod for state management.
@@ -79,9 +79,9 @@ The app interacts with the following Supabase tables:
 *   **Authentication:** Users authenticate via Google Sign-In using Supabase Auth. Role-based routing directs users to either the Customer App or Vendor Dashboard based on the `user_roles` table.
 *   **Push Notifications:** Integrated with Firebase Cloud Messaging (FCM). The app requests permissions natively on startup. `firebaseMessagingBackgroundHandler` handles background alerts, and `flutter_local_notifications` displays foreground notifications. Uses an Edge RPC function `register_device_token_rpc` to register tokens.
 *   **Cart Management:** The cart is synchronized with the Supabase `cart_items` table in real-time or via API calls, allowing for cross-device persistence.
-*   **Payment Flow:** Initiates via Supabase Edge Function (`create-cashfree-order`), opens a Cashfree checkout page in an in-app WebView (`payment_webview_screen.dart`), and verifies success using `verify-cashfree-payment`.
+*   **Payment Flow:** Initiates via Supabase Edge Function (`create-razorpay-order`), opens Razorpay checkout via the native SDK (`razorpay_flutter`), and verifies success using HMAC SHA256 signature verification in `verify-razorpay-payment`.
 *   **Vendor Dashboard:** Vendors can manage menu items (CRUD operations with image uploads to `item-images` bucket), view real-time orders, and toggle canteen availability (`is_open`).
-*   **Customer Flow:** Customers can browse menu items, add them to cart, proceed to checkout via Cashfree, track order status in real-time, and view their profile.
+*   **Customer Flow:** Customers can browse menu items, add them to cart, proceed to checkout via Razorpay, track order status in real-time, and view their profile.
 
 ## 7. App Initialization Sequence (`main.dart`)
 1.  Ensures widgets are initialized.

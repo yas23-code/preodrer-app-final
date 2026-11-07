@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Canteen {
 
- String get id; String get name; String? get location;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'vendor_id') String? get vendorId; bool get isOpen;
+ String get id; String get name; String? get location;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'vendor_id') String? get vendorId;@JsonKey(name: 'is_open') bool get isOpen;
 /// Create a copy of Canteen
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $CanteenCopyWith<$Res>  {
   factory $CanteenCopyWith(Canteen value, $Res Function(Canteen) _then) = _$CanteenCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? location,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'vendor_id') String? vendorId, bool isOpen
+ String id, String name, String? location,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'vendor_id') String? vendorId,@JsonKey(name: 'is_open') bool isOpen
 });
 
 
@@ -158,7 +158,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? location, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'vendor_id')  String? vendorId,  bool isOpen)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? location, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'vendor_id')  String? vendorId, @JsonKey(name: 'is_open')  bool isOpen)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Canteen() when $default != null:
 return $default(_that.id,_that.name,_that.location,_that.imageUrl,_that.vendorId,_that.isOpen);case _:
@@ -179,7 +179,7 @@ return $default(_that.id,_that.name,_that.location,_that.imageUrl,_that.vendorId
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? location, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'vendor_id')  String? vendorId,  bool isOpen)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? location, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'vendor_id')  String? vendorId, @JsonKey(name: 'is_open')  bool isOpen)  $default,) {final _that = this;
 switch (_that) {
 case _Canteen():
 return $default(_that.id,_that.name,_that.location,_that.imageUrl,_that.vendorId,_that.isOpen);case _:
@@ -199,7 +199,7 @@ return $default(_that.id,_that.name,_that.location,_that.imageUrl,_that.vendorId
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? location, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'vendor_id')  String? vendorId,  bool isOpen)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? location, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'vendor_id')  String? vendorId, @JsonKey(name: 'is_open')  bool isOpen)?  $default,) {final _that = this;
 switch (_that) {
 case _Canteen() when $default != null:
 return $default(_that.id,_that.name,_that.location,_that.imageUrl,_that.vendorId,_that.isOpen);case _:
@@ -214,7 +214,7 @@ return $default(_that.id,_that.name,_that.location,_that.imageUrl,_that.vendorId
 @JsonSerializable()
 
 class _Canteen implements Canteen {
-  const _Canteen({required this.id, required this.name, this.location, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'vendor_id') this.vendorId, this.isOpen = true});
+  const _Canteen({required this.id, required this.name, this.location, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'vendor_id') this.vendorId, @JsonKey(name: 'is_open') this.isOpen = true});
   factory _Canteen.fromJson(Map<String, dynamic> json) => _$CanteenFromJson(json);
 
 @override final  String id;
@@ -222,7 +222,7 @@ class _Canteen implements Canteen {
 @override final  String? location;
 @override@JsonKey(name: 'image_url') final  String? imageUrl;
 @override@JsonKey(name: 'vendor_id') final  String? vendorId;
-@override@JsonKey() final  bool isOpen;
+@override@JsonKey(name: 'is_open') final  bool isOpen;
 
 /// Create a copy of Canteen
 /// with the given fields replaced by the non-null parameter values.
@@ -257,7 +257,7 @@ abstract mixin class _$CanteenCopyWith<$Res> implements $CanteenCopyWith<$Res> {
   factory _$CanteenCopyWith(_Canteen value, $Res Function(_Canteen) _then) = __$CanteenCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? location,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'vendor_id') String? vendorId, bool isOpen
+ String id, String name, String? location,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'vendor_id') String? vendorId,@JsonKey(name: 'is_open') bool isOpen
 });
 
 

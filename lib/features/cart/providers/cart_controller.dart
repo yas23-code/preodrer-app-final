@@ -331,11 +331,11 @@ class CartController extends AsyncNotifier<CartState> {
   ///
   /// 1. Updates/validates the phone number
   /// 2. Creates the order in the DB (payment_status='pending')
-  /// 3. Calls the `create-cashfree-order` edge function
-  /// 4. Returns [CashfreeSessionData] so the UI can open the payment sheet
+  /// 3. Calls the `create-razorpay-order` edge function
+  /// 4. Returns [RazorpaySessionData] so the UI can open the payment sheet
   ///
   /// Does NOT clear the cart — that happens after payment confirmation.
-  Future<CashfreeSessionData> initiatePayment({
+  Future<RazorpaySessionData> initiatePayment({
     required double total,
     required String phone,
   }) async {
@@ -378,9 +378,9 @@ class CartController extends AsyncNotifier<CartState> {
       phone: dbPhone,
     );
 
-    // 4. Create Cashfree session via edge function
+    // 4. Create Razorpay order via edge function
     final paymentController = ref.read(paymentControllerProvider);
-    final session = await paymentController.createCashfreeSession(
+    final session = await paymentController.createRazorpayOrder(
       appOrderId: orderId,
       amount: total,
       customerPhone: dbPhone,
@@ -389,7 +389,7 @@ class CartController extends AsyncNotifier<CartState> {
       customerId: userId,
     );
 
-    debugPrint('[CartController] initiatePayment -> session created: cfOrderId=${session.cfOrderId}');
+    debugPrint('[CartController] initiatePayment -> session created: razorpayOrderId=${session.razorpayOrderId}');
     return session;
   }
 

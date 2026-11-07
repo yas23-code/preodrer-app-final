@@ -38,6 +38,14 @@
           }
         },
         {
+          "client_id": "820783342425-c9d30e06464bb00ca5d792b8cd421389.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abhinav.preorder_app",
+            "certificate_hash": "c9d30e06464bb00ca5d792b8cd4213895fddd00b"
+          }
+        },
+        {
           "client_id": "820783342425-l1fj7ge9qedqd086ftebiv64kcmi659h.apps.googleusercontent.com",
           "client_type": 3
         }
